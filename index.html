@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta
+      name="description"
+      content="A fast, modern Kanban board for organising projects and tasks."
+    />
+    <title>Kanban</title>
+    <script>
+      // GitHub Pages SPA routing: decode the path encoded by 404.html back
+      // into a real URL before the app boots, so React Router sees the
+      // actual deep-link URL instead of the redirected query string.
+      (function (l) {
+        if (l.search[1] === "/") {
+          var decoded = l.search
+            .slice(1)
+            .split("&")
+            .map(function (s) {
+              return s.replace(/~and~/g, "&");
+            })
+            .join("?");
+          window.history.replaceState(null, "", l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <script>
+      // Apply the persisted/system theme before first paint to avoid a
+      // flash of the wrong color scheme while React and Zustand hydrate.
+      (function () {
+        try {
+          var stored = JSON.parse(localStorage.getItem("kanban-theme") || "null");
+          var theme = stored && stored.state ? stored.state.theme : "system";
+          var isDark =
+            theme === "dark" ||
+            (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", isDark);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
