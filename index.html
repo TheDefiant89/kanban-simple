@@ -9,6 +9,17 @@
       name="description"
       content="A fast, modern Kanban board for organising projects and tasks."
     />
+    <!--
+      Baseline defense-in-depth CSP (see GitHub issue #6). GitHub Pages
+      serves this as a static site with no custom response headers, so it's
+      set via meta tag rather than a real Content-Security-Policy header.
+      The two inline bootstrap scripts below are allowlisted by hash rather
+      than 'unsafe-inline' so a future injected script still can't run.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-VoRtu49JBwuB7fq8gxlR/oIrGHGgXNxiM6juKGyolsE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; object-src 'none'"
+    />
     <title>Kanban</title>
     <script>
       // GitHub Pages SPA routing: decode the path encoded by 404.html back
