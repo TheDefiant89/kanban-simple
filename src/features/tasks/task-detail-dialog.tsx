@@ -87,7 +87,7 @@ export function TaskDetailDialog({
   const tagMutations = useTagMutations();
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [localSubtasks, setLocalSubtasks] = useState<SubtaskItem[]>([]);
+  const [subtasks, setSubtasks] = useState<SubtaskItem[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,7 +128,7 @@ export function TaskDetailDialog({
         recurrenceCron: task.recurrence_cron ?? "",
       });
       setSelectedTagIds(task.tags.map((t) => t.id));
-      setLocalSubtasks([]);
+      setSubtasks(task.subtasks);
     } else {
       reset({
         title: "",
@@ -142,7 +142,7 @@ export function TaskDetailDialog({
         recurrenceCron: "",
       });
       setSelectedTagIds([]);
-      setLocalSubtasks([]);
+      setSubtasks([]);
     }
     setConfirmDelete(false);
   }, [open, task, defaultColumnId, columns, reset]);
@@ -153,49 +153,49 @@ export function TaskDetailDialog({
   const invalidateTasks = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.tasks(projectId) });
 
-  const subtasks: SubtaskItem[] = isEdit ? task!.subtasks : localSubtasks;
-
   const handleAddSubtask = async (title: string) => {
-    if (isEdit) {
+    if (isEdit && task) {
       try {
-        await createSubtask({ taskId: task!.id, title, position: task!.subtasks.length });
+        const created = await createSubtask({ taskId: task.id, title, position: subtasks.length });
+        setSubtasks((prev) => [
+          ...prev,
+          { id: created.id, title: created.title, is_completed: created.is_completed },
+        ]);
         invalidateTasks();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add subtask");
       }
     } else {
-      setLocalSubtasks((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), title, is_completed: false },
-      ]);
+      setSubtasks((prev) => [...prev, { id: crypto.randomUUID(), title, is_completed: false }]);
     }
   };
 
   const handleToggleSubtask = async (id: string, completed: boolean) => {
+    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, is_completed: completed } : s)));
     if (isEdit) {
       try {
         await updateSubtask(id, { is_completed: completed });
         invalidateTasks();
       } catch (error) {
+        setSubtasks((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, is_completed: !completed } : s))
+        );
         toast.error(error instanceof Error ? error.message : "Failed to update subtask");
       }
-    } else {
-      setLocalSubtasks((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, is_completed: completed } : s))
-      );
     }
   };
 
   const handleDeleteSubtask = async (id: string) => {
+    const previous = subtasks;
+    setSubtasks((prev) => prev.filter((s) => s.id !== id));
     if (isEdit) {
       try {
         await deleteSubtask(id);
         invalidateTasks();
       } catch (error) {
+        setSubtasks(previous);
         toast.error(error instanceof Error ? error.message : "Failed to delete subtask");
       }
-    } else {
-      setLocalSubtasks((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
@@ -242,7 +242,7 @@ export function TaskDetailDialog({
           recurrenceCron: values.recurrenceType === "custom" ? values.recurrenceCron || null : null,
           tagIds: selectedTagIds,
         });
-        for (const [index, subtask] of localSubtasks.entries()) {
+        for (const [index, subtask] of subtasks.entries()) {
           await createSubtask({ taskId: created.id, title: subtask.title, position: index });
         }
         invalidateTasks();
