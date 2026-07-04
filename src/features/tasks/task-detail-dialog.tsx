@@ -237,6 +237,7 @@ export function TaskDetailDialog({
           },
         });
         await setTaskTags(task.id, selectedTagIds);
+        invalidateTasks();
       } else {
         const targetColumn = columns.find((c) => c.id === values.columnId);
         const created = await taskMutations.create.mutateAsync({
