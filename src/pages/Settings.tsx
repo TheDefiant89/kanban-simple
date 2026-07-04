@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/features/auth/auth-context";
-import { signOut, updatePassword } from "@/services/auth";
+import { signOut, changePassword } from "@/services/auth";
 import { deleteOwnAccount } from "@/services/account";
 import { exportUserDataAsCsv } from "@/services/export";
 import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/schemas";
@@ -32,6 +32,7 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   const {
@@ -44,7 +45,7 @@ export default function Settings() {
   const onChangePassword = async (values: ChangePasswordInput) => {
     setChangingPassword(true);
     try {
-      await updatePassword(values.password);
+      await changePassword(values.currentPassword, values.password);
       toast.success("Password updated");
       reset();
     } catch (error) {
@@ -74,15 +75,17 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      await deleteOwnAccount();
+      await deleteOwnAccount(deletePassword);
       toast.success("Account deleted");
       navigate("/login", { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete account");
-    } finally {
+      setDeletePassword("");
       setDeleting(false);
-      setDeleteConfirmOpen(false);
+      return;
     }
+    setDeleting(false);
+    setDeleteConfirmOpen(false);
   };
 
   return (
@@ -112,6 +115,18 @@ export default function Settings() {
           >
             <div className="flex items-center gap-2 text-sm font-medium">
               <KeyRound className="h-4 w-4" /> Change password
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="current-password">Current password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                {...register("currentPassword")}
+              />
+              {errors.currentPassword && (
+                <p className="text-xs text-destructive">{errors.currentPassword.message}</p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="new-password">New password</Label>
@@ -191,7 +206,10 @@ export default function Settings() {
         open={deleteConfirmOpen}
         onOpenChange={(open) => {
           setDeleteConfirmOpen(open);
-          if (!open) setDeleteConfirmText("");
+          if (!open) {
+            setDeleteConfirmText("");
+            setDeletePassword("");
+          }
         }}
       >
         <AlertDialogContent>
@@ -199,21 +217,39 @@ export default function Settings() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete your account and all of your data. Type{" "}
-              <span className="font-semibold text-foreground">DELETE</span> to confirm.
+              <span className="font-semibold text-foreground">DELETE</span> and enter your
+              password to confirm.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Input
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder="DELETE"
-            autoFocus
-          />
+          <div className="flex flex-col gap-3">
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoFocus
+            />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="delete-password">Password</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={deleteConfirmText !== "DELETE" || deleting}
+              disabled={deleteConfirmText !== "DELETE" || !deletePassword || deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteAccount}
+              onClick={(event) => {
+                // Radix closes the dialog on click by default; keep it open
+                // until we know whether the (async) delete actually succeeded.
+                event.preventDefault();
+                void handleDeleteAccount();
+              }}
             >
               {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete account

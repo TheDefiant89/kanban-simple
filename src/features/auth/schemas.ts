@@ -36,6 +36,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const changePasswordSchema = z
   .object({
+    currentPassword: z.string().min(1, "Please enter your current password"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
