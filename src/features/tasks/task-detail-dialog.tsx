@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -113,6 +113,16 @@ export function TaskDetailDialog({
     },
   });
 
+  // Read via a ref rather than a dependency so this effect only reruns when
+  // the dialog opens or the task being edited actually changes — not on
+  // every Board re-render. `columns` is rebuilt as a new array on every
+  // Board render (see useBoardData), so including it here made the effect
+  // refire whenever anything (e.g. a subtask mutation's invalidateTasks())
+  // caused Board to re-render while the dialog was open, resetting the
+  // locally-tracked `subtasks` state back to the stale `task` snapshot.
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+
   useEffect(() => {
     if (!open) return;
     if (task) {
@@ -133,7 +143,7 @@ export function TaskDetailDialog({
       reset({
         title: "",
         description: "",
-        columnId: defaultColumnId ?? columns[0]?.id ?? "",
+        columnId: defaultColumnId ?? columnsRef.current[0]?.id ?? "",
         priority: "medium",
         startDate: "",
         dueDate: "",
@@ -145,7 +155,7 @@ export function TaskDetailDialog({
       setSubtasks([]);
     }
     setConfirmDelete(false);
-  }, [open, task, defaultColumnId, columns, reset]);
+  }, [open, task, defaultColumnId, reset]);
 
   const recurrenceType = watch("recurrenceType");
   const completedDate = watch("completedDate");
