@@ -56,7 +56,7 @@ export function BoardToolbar({
   onShowCompletedChange,
 }: BoardToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b bg-background/60 px-4 py-2.5">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background/60 px-4 py-2.5">
       <div className="relative w-full max-w-xs">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input

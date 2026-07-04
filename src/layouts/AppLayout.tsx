@@ -35,7 +35,7 @@ export function AppLayout() {
   const isBoardRoute = location.pathname.startsWith("/board/");
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -98,7 +98,7 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <Outlet />
       </main>
     </div>

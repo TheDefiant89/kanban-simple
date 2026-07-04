@@ -55,7 +55,7 @@ export function ColumnComponent({
       <div
         ref={setNodeRef}
         style={style}
-        className="flex w-11 shrink-0 flex-col items-center gap-2 rounded-xl border bg-muted/40 py-3"
+        className="flex h-full w-11 shrink-0 flex-col items-center gap-2 rounded-xl border bg-muted/40 py-3"
       >
         <button
           {...attributes}
@@ -84,14 +84,14 @@ export function ColumnComponent({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-xl border bg-muted/40",
+        "flex h-full w-72 shrink-0 flex-col rounded-xl border bg-muted/40",
         isDragging && "opacity-50"
       )}
     >
       <div
         {...attributes}
         {...listeners}
-        className="flex cursor-grab items-center gap-2 rounded-t-xl border-b px-3 py-2.5 active:cursor-grabbing"
+        className="flex shrink-0 cursor-grab items-center gap-2 rounded-t-xl border-b px-3 py-2.5 active:cursor-grabbing"
       >
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -137,7 +137,7 @@ export function ColumnComponent({
       <div
         ref={setDropRef}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto scrollbar-thin p-2 transition-colors",
+          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-thin p-2 transition-colors",
           isOver && "bg-primary/5"
         )}
       >
@@ -156,7 +156,7 @@ export function ColumnComponent({
         </SortableContext>
       </div>
 
-      <div className="p-2 pt-0">
+      <div className="shrink-0 p-2 pt-0">
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground"

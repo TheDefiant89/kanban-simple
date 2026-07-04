@@ -229,8 +229,8 @@ export default function Board() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center gap-3 border-b px-4 py-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/dashboard" aria-label="Back to dashboard">
             <ArrowLeft className="h-4 w-4" />
@@ -257,7 +257,7 @@ export default function Board() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex flex-1 items-start gap-3 overflow-x-auto p-4 scrollbar-thin">
+        <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
           <SortableContext items={items.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             {items.map((column) => (
               <ColumnComponent
