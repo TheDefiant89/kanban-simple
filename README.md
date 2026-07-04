@@ -6,7 +6,7 @@ only backend. The app compiles to static files and deploys directly to GitHub Pa
 there is no server to run or maintain after deployment.
 
 Projects, boards, columns, tasks, subtasks, tags, filtering/search, drag-and-drop
-reordering, a lightweight recurring-task engine, JSON export and account deletion are
+reordering, a lightweight recurring-task engine, CSV export and account deletion are
 all included. See [Features](#features) below for the full list.
 
 ## Tech stack
@@ -39,7 +39,7 @@ all included. See [Features](#features) below for the full list.
 - **Filtering & search:** All / Overdue / Today / Tomorrow / This Week / This Month /
   No Due Date / Completed, multi-select priority filter, multi-select tag filter, and
   live search across title, description and tags. Completed tasks are hidden by default.
-- **Settings:** view email, change password, sign out, export all data as JSON, delete
+- **Settings:** view email, change password, sign out, export all data as CSV, delete
   account (with confirmation).
 - **UI:** responsive (mobile/tablet/desktop), light/dark/system theme, loading
   skeletons, empty states, toast notifications, sticky nav, floating action button on

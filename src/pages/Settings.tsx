@@ -22,7 +22,7 @@ import {
 import { useAuth } from "@/features/auth/auth-context";
 import { signOut, updatePassword } from "@/services/auth";
 import { deleteOwnAccount } from "@/services/account";
-import { downloadJson, exportUserData } from "@/services/export";
+import { exportUserDataAsCsv } from "@/services/export";
 import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/schemas";
 
 export default function Settings() {
@@ -62,8 +62,7 @@ export default function Settings() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const data = await exportUserData();
-      downloadJson(`kanban-export-${new Date().toISOString().slice(0, 10)}.json`, data);
+      await exportUserDataAsCsv();
       toast.success("Export downloaded");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to export data");
@@ -156,7 +155,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle>Export data</CardTitle>
           <CardDescription>
-            Download all of your projects, columns, tasks, subtasks and tags as a JSON file
+            Download all of your projects, columns, tasks, subtasks and tags as CSV files
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,7 +165,7 @@ export default function Settings() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Export as JSON
+            Export as CSV
           </Button>
         </CardContent>
       </Card>
