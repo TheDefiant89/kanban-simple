@@ -377,14 +377,19 @@ export default function Board() {
 
 // Keeps the local drag-and-drop mirror state in sync with fresh server/query
 // data (or filter changes) without clobbering an in-flight drag reorder.
+//
+// Compares the full column/task content (not just column ids and task id
+// order) so that in-place edits to a task — completing a subtask, editing
+// its title, changing tags, etc. — are picked up even though the set and
+// order of task ids hasn't changed. A narrower signature previously meant
+// those edits never reached the board's TaskCards until something else
+// (e.g. adding/removing/reordering a task) happened to change the id list.
 function useMemoSync(
   source: ColumnWithTasks[],
   isDragging: RefObject<boolean>,
   setState: (v: ColumnWithTasks[]) => void
 ) {
-  const serialized = JSON.stringify(
-    source.map((c) => [c.id, c.is_collapsed, c.tasks.map((t) => t.id)])
-  );
+  const serialized = JSON.stringify(source);
   const prevRef = useRef<string>("");
   if (prevRef.current !== serialized && !isDragging.current) {
     prevRef.current = serialized;
