@@ -8,6 +8,7 @@ import {
   closestCorners,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -83,6 +84,22 @@ export default function Board() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  // While dragging a column, restrict collision candidates to other column
+  // containers. Otherwise dnd-kit also considers every task and task-list
+  // dropzone nested inside those columns — since a dragged column's rect
+  // spans its full height, its closest corners usually land on a nested
+  // task rather than the column itself, so `over.id` resolves to a task id
+  // instead of a column id and the reorder in handleDragEnd silently no-ops.
+  const collisionDetection: CollisionDetection = (args) => {
+    if (args.active.data.current?.type === "column") {
+      const columnContainers = args.droppableContainers.filter(
+        (container) => container.data.current?.type === "column"
+      );
+      return closestCorners({ ...args, droppableContainers: columnContainers });
+    }
+    return closestCorners(args);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     isDragging.current = true;
@@ -235,7 +252,7 @@ export default function Board() {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
