@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -12,21 +13,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TaskCard } from "@/features/board/task-card";
 import { cn } from "@/lib/utils";
-import type { ColumnWithTasks, TaskWithRelations } from "@/types";
+import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 export const dropzoneId = (columnId: string) => `dropzone::${columnId}`;
 
 interface ColumnComponentProps {
   column: ColumnWithTasks;
-  onAddTask: () => void;
+  onAddTask: (columnId: string) => void;
   onOpenTask: (task: TaskWithRelations) => void;
   onToggleComplete: (task: TaskWithRelations, completed: boolean) => void;
-  onRename: () => void;
-  onDelete: () => void;
-  onToggleCollapse: () => void;
+  onRename: (column: Column) => void;
+  onDelete: (column: Column) => void;
+  onToggleCollapse: (column: Column) => void;
 }
 
-export function ColumnComponent({
+// Memoised: with stable callbacks from Board and identity-preserving
+// displayColumns, only columns whose contents changed re-render.
+export const ColumnComponent = memo(function ColumnComponent({
   column,
   onAddTask,
   onOpenTask,
@@ -60,7 +63,7 @@ export function ColumnComponent({
         <button
           {...attributes}
           {...listeners}
-          onClick={onToggleCollapse}
+          onClick={() => onToggleCollapse(column)}
           className="flex flex-col items-center gap-2"
           aria-label="Expand column"
         >
@@ -107,7 +110,7 @@ export function ColumnComponent({
           className="h-6 w-6"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleCollapse();
+            onToggleCollapse(column);
           }}
           aria-label="Collapse column"
         >
@@ -126,8 +129,8 @@ export function ColumnComponent({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onRename}>Edit column</DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+            <DropdownMenuItem onClick={() => onRename(column)}>Edit column</DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => onDelete(column)}>
               <Trash2 className="h-4 w-4" /> Delete column
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -149,8 +152,8 @@ export function ColumnComponent({
             <TaskCard
               key={task.id}
               task={task}
-              onClick={() => onOpenTask(task)}
-              onToggleComplete={(completed) => onToggleComplete(task, completed)}
+              onOpen={onOpenTask}
+              onToggleComplete={onToggleComplete}
             />
           ))}
         </SortableContext>
@@ -160,11 +163,11 @@ export function ColumnComponent({
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground"
-          onClick={onAddTask}
+          onClick={() => onAddTask(column.id)}
         >
           <Plus className="h-4 w-4" /> Add task
         </Button>
       </div>
     </div>
   );
-}
+});

@@ -38,7 +38,7 @@ import { TagSelector } from "@/features/tasks/tag-selector";
 import { taskFormSchema, type TaskFormInput } from "@/features/tasks/schemas";
 import { useTaskMutations } from "@/features/board/use-board";
 import { useTagMutations, useTags } from "@/features/board/use-tags";
-import { createSubtask, deleteSubtask, updateSubtask } from "@/services/subtasks";
+import { createSubtask, createSubtasks, deleteSubtask, updateSubtask } from "@/services/subtasks";
 import { setTaskTags } from "@/services/tasks";
 import { queryKeys } from "@/lib/query-client";
 import { formatDate } from "@/lib/dates";
@@ -253,9 +253,13 @@ export function TaskDetailDialog({
           recurrenceCron: values.recurrenceType === "custom" ? values.recurrenceCron || null : null,
           tagIds: selectedTagIds,
         });
-        for (const [index, subtask] of subtasks.entries()) {
-          await createSubtask({ taskId: created.id, title: subtask.title, position: index });
-        }
+        await createSubtasks(
+          subtasks.map((subtask, index) => ({
+            taskId: created.id,
+            title: subtask.title,
+            position: index,
+          }))
+        );
         invalidateTasks();
       }
       onOpenChange(false);

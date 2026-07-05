@@ -17,11 +17,19 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom", "react-router-dom"],
-          supabase: ["@supabase/supabase-js"],
-          query: ["@tanstack/react-query"],
-          dnd: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+        // Function form so nested package entry points (e.g. react-dom/client)
+        // are matched by package directory — the array form left react-dom's
+        // implementation in the app chunk, which changes on every deploy.
+        manualChunks(id) {
+          const match = id.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)\//);
+          if (!match) return undefined;
+          const pkg = match[1];
+          if (["react", "react-dom", "scheduler", "react-router", "react-router-dom"].includes(pkg))
+            return "vendor";
+          if (pkg.startsWith("@supabase/")) return "supabase";
+          if (pkg.startsWith("@tanstack/")) return "query";
+          if (pkg.startsWith("@dnd-kit/")) return "dnd";
+          return undefined;
         },
       },
     },

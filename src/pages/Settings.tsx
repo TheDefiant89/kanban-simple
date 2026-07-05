@@ -58,8 +58,12 @@ export default function Settings() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/login");
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign out");
+    }
   };
 
   const handleExport = async () => {

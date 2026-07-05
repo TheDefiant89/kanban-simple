@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -44,11 +44,18 @@ import {
   useProjectBySlug,
   useTaskMutations,
 } from "@/features/board/use-board";
+import {
+  buildPositionUpdates,
+  mergeVisibleOrder,
+  type TaskPositionUpdate,
+} from "@/features/board/reorder";
 import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
-import { matchesFilters } from "@/lib/task-filters";
+import { buildTaskPredicate } from "@/lib/task-filters";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
+
+const noop = () => {};
 
 export default function Board() {
   const params = useParams<{ slug: string }>();
@@ -84,13 +91,43 @@ export default function Board() {
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
 
-  const displayColumns = useMemo(
-    () => columns.map((c) => ({ ...c, tasks: c.tasks.filter((t) => matchesFilters(t, filters)) })),
-    [columns, filters]
+  // Filtered view of the board. Column objects keep their identity when
+  // their filtered contents haven't changed, so the memoised column/card
+  // components below can skip re-rendering on updates that only affect
+  // other columns (e.g. a search keystroke).
+  const displayCache = useRef(
+    new Map<string, { source: ColumnWithTasks; result: ColumnWithTasks }>()
   );
+  const displayColumns = useMemo(() => {
+    const matches = buildTaskPredicate(filters);
+    const cache = displayCache.current;
+    const nextCache = new Map<string, { source: ColumnWithTasks; result: ColumnWithTasks }>();
+    const next = columns.map((column) => {
+      const tasks = column.tasks.filter(matches);
+      const hit = cache.get(column.id);
+      const reusable =
+        hit &&
+        hit.source === column &&
+        hit.result.tasks.length === tasks.length &&
+        hit.result.tasks.every((task, i) => task === tasks[i]);
+      const entry = reusable ? hit : { source: column, result: { ...column, tasks } };
+      nextCache.set(column.id, entry);
+      return entry.result;
+    });
+    displayCache.current = nextCache;
+    return next;
+  }, [columns, filters]);
 
+  // Keep the local drag-and-drop mirror in sync with the memoised query
+  // data unless a drag is in flight. Reference equality is sufficient
+  // because useBoardData and displayColumns preserve identities when
+  // nothing changed (render-phase derived-state reset pattern).
   const isDragging = useRef(false);
-  useMemoSync(displayColumns, isDragging, setItems);
+  const lastSynced = useRef<ColumnWithTasks[] | null>(null);
+  if (lastSynced.current !== displayColumns && !isDragging.current) {
+    lastSynced.current = displayColumns;
+    setItems(displayColumns);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -143,77 +180,140 @@ export default function Board() {
       }
       if (toColIdx === -1 || fromColIdx === toColIdx) return prev;
 
-      const next = prev.map((c) => ({ ...c, tasks: [...c.tasks] }));
-      const fromTasks = next[fromColIdx].tasks;
-      const toTasks = next[toColIdx].tasks;
+      // Clone only the two affected columns; untouched columns keep their
+      // identity so their memoised components skip re-rendering mid-drag.
+      const fromTasks = [...prev[fromColIdx].tasks];
       const activeIndex = fromTasks.findIndex((t) => t.id === activeId);
       const [moved] = fromTasks.splice(activeIndex, 1);
+
+      const toTasks = [...prev[toColIdx].tasks];
       const overIndex = toTasks.findIndex((t) => t.id === overId);
       const insertAt = overIndex >= 0 ? overIndex : toTasks.length;
-      toTasks.splice(insertAt, 0, { ...moved, column_id: next[toColIdx].id });
+      toTasks.splice(insertAt, 0, { ...moved, column_id: prev[toColIdx].id });
+
+      const next = [...prev];
+      next[fromColIdx] = { ...prev[fromColIdx], tasks: fromTasks };
+      next[toColIdx] = { ...prev[toColIdx], tasks: toTasks };
       return next;
     });
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const resetDragState = () => {
     isDragging.current = false;
-    const { active, over } = event;
-    const activeType = active.data.current?.type;
     setActiveTask(null);
     setActiveColumn(null);
+    // The mirror now reflects the drop result; mark the current data
+    // snapshot as seen so only a later cache update (e.g. the optimistic
+    // reorder patch) re-syncs it.
+    lastSynced.current = displayColumns;
+  };
 
-    if (!over) return;
+  const handleDragCancel = () => {
+    resetDragState();
+    originalColumnId.current = null;
+    setItems(displayColumns);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    resetDragState();
+    const { active, over } = event;
+    const activeType = active.data.current?.type;
+
+    if (!over) {
+      // Dropped outside any droppable: undo the drag-over mirror changes.
+      originalColumnId.current = null;
+      setItems(displayColumns);
+      return;
+    }
 
     if (activeType === "column") {
       const activeId = String(active.id);
       const overId = String(over.id);
       if (activeId === overId) return;
-      setItems((prev) => {
-        const oldIndex = prev.findIndex((c) => c.id === activeId);
-        const newIndex = prev.findIndex((c) => c.id === overId);
-        if (oldIndex === -1 || newIndex === -1) return prev;
-        const reordered = arrayMove(prev, oldIndex, newIndex);
-        columnMutations.reorder.mutate(reordered.map((c, i) => ({ id: c.id, position: i })));
-        return reordered;
-      });
+      const oldIndex = items.findIndex((c) => c.id === activeId);
+      const newIndex = items.findIndex((c) => c.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const reordered = arrayMove(items, oldIndex, newIndex);
+      setItems(reordered);
+      const updates = reordered
+        .map((column, index) => ({ id: column.id, position: index }))
+        .filter((u, index) => reordered[index].position !== u.position);
+      if (updates.length > 0) columnMutations.reorder.mutate(updates);
       return;
     }
 
     if (activeType === "task") {
       const activeId = String(active.id);
       const overId = String(over.id);
-
-      setItems((prev) => {
-        const fromColIdx = prev.findIndex((c) => c.tasks.some((t) => t.id === activeId));
-        if (fromColIdx === -1) return prev;
-
-        const next = prev.map((c) => ({ ...c, tasks: [...c.tasks] }));
-        const tasksInCol = next[fromColIdx].tasks;
-        const activeIndex = tasksInCol.findIndex((t) => t.id === activeId);
-        const overIndex = tasksInCol.findIndex((t) => t.id === overId);
-
-        if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
-          next[fromColIdx].tasks = arrayMove(tasksInCol, activeIndex, overIndex);
-        }
-
-        const currentColumnId = next[fromColIdx].id;
-        const affectedColumnIds = new Set(
-          [currentColumnId, originalColumnId.current].filter(Boolean) as string[]
-        );
-
-        affectedColumnIds.forEach((colId) => {
-          const col = next.find((c) => c.id === colId);
-          if (!col) return;
-          taskMutations.reorder.mutate(
-            col.tasks.map((t, i) => ({ id: t.id, position: i, column_id: col.id }))
-          );
-        });
-
-        return next;
-      });
+      const movedFromColumnId = originalColumnId.current;
       originalColumnId.current = null;
+
+      const colIdx = items.findIndex((c) => c.tasks.some((t) => t.id === activeId));
+      if (colIdx === -1) return;
+
+      // Apply the final same-column position adjustment to the mirror.
+      let next = items;
+      const tasksInCol = items[colIdx].tasks;
+      const fromIndex = tasksInCol.findIndex((t) => t.id === activeId);
+      const toIndex = tasksInCol.findIndex((t) => t.id === overId);
+      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+        next = [...items];
+        next[colIdx] = { ...items[colIdx], tasks: arrayMove(tasksInCol, fromIndex, toIndex) };
+      }
+      setItems(next);
+
+      // Persist positions against the FULL task lists: the mirror only
+      // holds tasks matching the active filters, and indexing filtered
+      // lists would collide with hidden tasks' positions.
+      const affectedIds = new Set(
+        [next[colIdx].id, movedFromColumnId].filter(Boolean) as string[]
+      );
+      const tasksById = new Map(columns.flatMap((c) => c.tasks).map((t) => [t.id, t]));
+      const updates: TaskPositionUpdate[] = [];
+      for (const columnId of affectedIds) {
+        const full = columns.find((c) => c.id === columnId);
+        const visible = next.find((c) => c.id === columnId);
+        if (!full || !visible) continue;
+        const merged = mergeVisibleOrder(full.tasks, visible.tasks, activeId);
+        updates.push(...buildPositionUpdates(merged, columnId, tasksById));
+      }
+      if (updates.length > 0) taskMutations.reorder.mutate(updates);
     }
   };
+
+  const handleAddTask = useCallback((columnId: string) => {
+    setEditingTask(null);
+    setDefaultColumnId(columnId);
+    setTaskDialogOpen(true);
+  }, []);
+
+  const handleOpenTask = useCallback((task: TaskWithRelations) => {
+    setEditingTask(task);
+    setTaskDialogOpen(true);
+  }, []);
+
+  const setCompletedMutate = taskMutations.setCompleted.mutate;
+  const handleToggleComplete = useCallback(
+    (task: TaskWithRelations, completed: boolean) => setCompletedMutate({ task, completed }),
+    [setCompletedMutate]
+  );
+
+  const handleRenameColumn = useCallback((column: Column) => {
+    setEditingColumn(column);
+    setColumnDialogOpen(true);
+  }, []);
+
+  const handleDeleteColumn = useCallback((column: Column) => setDeletingColumn(column), []);
+
+  const updateColumnMutate = columnMutations.update.mutate;
+  const handleToggleCollapse = useCallback(
+    (column: Column) =>
+      updateColumnMutate({
+        columnId: column.id,
+        updates: { is_collapsed: !column.is_collapsed },
+      }),
+    [updateColumnMutate]
+  );
 
   if (isLoading) {
     return (
@@ -268,6 +368,7 @@ export default function Board() {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
           <SortableContext items={items.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
@@ -275,29 +376,12 @@ export default function Board() {
               <ColumnComponent
                 key={column.id}
                 column={column}
-                onAddTask={() => {
-                  setEditingTask(null);
-                  setDefaultColumnId(column.id);
-                  setTaskDialogOpen(true);
-                }}
-                onOpenTask={(task) => {
-                  setEditingTask(task);
-                  setTaskDialogOpen(true);
-                }}
-                onToggleComplete={(task, completed) =>
-                  taskMutations.setCompleted.mutate({ task, completed })
-                }
-                onRename={() => {
-                  setEditingColumn(column);
-                  setColumnDialogOpen(true);
-                }}
-                onDelete={() => setDeletingColumn(column)}
-                onToggleCollapse={() =>
-                  columnMutations.update.mutate({
-                    columnId: column.id,
-                    updates: { is_collapsed: !column.is_collapsed },
-                  })
-                }
+                onAddTask={handleAddTask}
+                onOpenTask={handleOpenTask}
+                onToggleComplete={handleToggleComplete}
+                onRename={handleRenameColumn}
+                onDelete={handleDeleteColumn}
+                onToggleCollapse={handleToggleCollapse}
               />
             ))}
           </SortableContext>
@@ -316,7 +400,7 @@ export default function Board() {
 
         <DragOverlay>
           {activeTask && (
-            <TaskCard task={activeTask} onClick={() => {}} onToggleComplete={() => {}} dragging />
+            <TaskCard task={activeTask} onOpen={noop} onToggleComplete={noop} dragging />
           )}
           {activeColumn && (
             <div className="w-72 rounded-xl border bg-card p-3 shadow-lg">
@@ -385,26 +469,4 @@ export default function Board() {
       />
     </div>
   );
-}
-
-// Keeps the local drag-and-drop mirror state in sync with fresh server/query
-// data (or filter changes) without clobbering an in-flight drag reorder.
-//
-// Compares the full column/task content (not just column ids and task id
-// order) so that in-place edits to a task — completing a subtask, editing
-// its title, changing tags, etc. — are picked up even though the set and
-// order of task ids hasn't changed. A narrower signature previously meant
-// those edits never reached the board's TaskCards until something else
-// (e.g. adding/removing/reordering a task) happened to change the id list.
-function useMemoSync(
-  source: ColumnWithTasks[],
-  isDragging: RefObject<boolean>,
-  setState: (v: ColumnWithTasks[]) => void
-) {
-  const serialized = JSON.stringify(source);
-  const prevRef = useRef<string>("");
-  if (prevRef.current !== serialized && !isDragging.current) {
-    prevRef.current = serialized;
-    setState(source);
-  }
 }

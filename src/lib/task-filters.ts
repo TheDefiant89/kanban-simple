@@ -1,49 +1,87 @@
+import {
+  endOfMonth,
+  endOfWeek,
+  isToday,
+  isTomorrow,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import type { TaskFilters, TaskWithRelations } from "@/types";
-import { isDueThisMonth, isDueThisWeek, isDueToday, isDueTomorrow, isOverdue } from "./dates";
+import { parseDate } from "./dates";
 
-export function matchesFilters(task: TaskWithRelations, filters: TaskFilters): boolean {
-  if (filters.due !== "completed" && !filters.showCompleted && task.completed_at) return false;
+export type TaskPredicate = (task: TaskWithRelations) => boolean;
 
-  switch (filters.due) {
+/**
+ * Builds a predicate for the given filters. Date boundaries, lookup sets
+ * and the lowercased search query are computed once here instead of per
+ * task, since the returned predicate runs in the board's render hot loop.
+ */
+export function buildTaskPredicate(filters: TaskFilters): TaskPredicate {
+  const query = filters.search.trim().toLowerCase();
+  const priorities = filters.priorities.length > 0 ? new Set(filters.priorities) : null;
+  const tagIds = filters.tagIds.length > 0 ? new Set(filters.tagIds) : null;
+  const dueCheck = buildDueCheck(filters.due);
+  const hideCompleted = filters.due !== "completed" && !filters.showCompleted;
+
+  return (task) => {
+    if (hideCompleted && task.completed_at) return false;
+    if (dueCheck && !dueCheck(task)) return false;
+    if (priorities && !priorities.has(task.priority)) return false;
+    if (tagIds && !task.tags.some((t) => tagIds.has(t.id))) return false;
+    if (query) {
+      const inTitle = task.title.toLowerCase().includes(query);
+      const inDescription = task.description?.toLowerCase().includes(query) ?? false;
+      const inTags = task.tags.some((t) => t.name.toLowerCase().includes(query));
+      if (!inTitle && !inDescription && !inTags) return false;
+    }
+    return true;
+  };
+}
+
+function buildDueCheck(due: TaskFilters["due"]): TaskPredicate | null {
+  switch (due) {
     case "completed":
-      if (!task.completed_at) return false;
-      break;
-    case "overdue":
-      if (!isOverdue(task.due_date, task.completed_at)) return false;
-      break;
+      return (task) => !!task.completed_at;
+    case "overdue": {
+      const todayStart = startOfDay(new Date());
+      return (task) => {
+        if (task.completed_at) return false;
+        const date = parseDate(task.due_date);
+        return !!date && date < todayStart;
+      };
+    }
     case "today":
-      if (!isDueToday(task.due_date)) return false;
-      break;
+      return (task) => {
+        const date = parseDate(task.due_date);
+        return !!date && isToday(date);
+      };
     case "tomorrow":
-      if (!isDueTomorrow(task.due_date)) return false;
-      break;
-    case "week":
-      if (!isDueThisWeek(task.due_date)) return false;
-      break;
-    case "month":
-      if (!isDueThisMonth(task.due_date)) return false;
-      break;
+      return (task) => {
+        const date = parseDate(task.due_date);
+        return !!date && isTomorrow(date);
+      };
+    case "week": {
+      const now = new Date();
+      const start = startOfWeek(now, { weekStartsOn: 1 });
+      const end = endOfWeek(now, { weekStartsOn: 1 });
+      return (task) => {
+        const date = parseDate(task.due_date);
+        return !!date && date >= start && date <= end;
+      };
+    }
+    case "month": {
+      const now = new Date();
+      const start = startOfMonth(now);
+      const end = endOfMonth(now);
+      return (task) => {
+        const date = parseDate(task.due_date);
+        return !!date && date >= start && date <= end;
+      };
+    }
     case "none":
-      if (task.due_date) return false;
-      break;
+      return (task) => !task.due_date;
     default:
-      break;
+      return null;
   }
-
-  if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
-
-  if (filters.tagIds.length > 0) {
-    const taskTagIds = new Set(task.tags.map((t) => t.id));
-    if (!filters.tagIds.some((id) => taskTagIds.has(id))) return false;
-  }
-
-  if (filters.search.trim().length > 0) {
-    const query = filters.search.trim().toLowerCase();
-    const inTitle = task.title.toLowerCase().includes(query);
-    const inDescription = task.description?.toLowerCase().includes(query) ?? false;
-    const inTags = task.tags.some((t) => t.name.toLowerCase().includes(query));
-    if (!inTitle && !inDescription && !inTags) return false;
-  }
-
-  return true;
 }
