@@ -57,7 +57,8 @@ export async function deleteColumn(columnId: string): Promise<void> {
 }
 
 export async function reorderColumns(updates: { id: string; position: number }[]): Promise<void> {
-  await Promise.all(
-    updates.map((u) => supabase.from("columns").update({ position: u.position }).eq("id", u.id))
-  );
+  if (updates.length === 0) return;
+  // Single round trip via RPC instead of one UPDATE request per row.
+  const { error } = await supabase.rpc("reorder_columns", { updates });
+  if (error) throw error;
 }

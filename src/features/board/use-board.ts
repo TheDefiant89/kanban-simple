@@ -20,7 +20,7 @@ import { getProject, getProjectBySlug } from "@/services/projects";
 export function useProjectBySlug(slug: string) {
   const queryClient = useQueryClient();
   return useQuery({
-    queryKey: ["project-by-slug", slug],
+    queryKey: queryKeys.projectBySlug(slug),
     queryFn: async () => {
       const project = await getProjectBySlug(slug);
       // Seed the by-id project cache so useBoardData doesn't re-fetch the

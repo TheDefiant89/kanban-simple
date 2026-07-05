@@ -59,14 +59,24 @@ export const TaskCard = memo(function TaskCard({
           onCheckedChange={(checked) => onToggleComplete(task, checked === true)}
           className="mt-0.5"
         />
-        <p
+        {/* Real button so keyboard users can open the task: Enter/Space on
+            the card itself are claimed by dnd-kit's KeyboardSensor for
+            dragging, which made the details dialog mouse-only. Keydown is
+            stopped from bubbling so activating it doesn't start a drag. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(task);
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
           className={cn(
-            "min-w-0 flex-1 text-sm font-medium leading-snug",
+            "min-w-0 flex-1 cursor-pointer text-left text-sm font-medium leading-snug",
             task.completed_at && "line-through text-muted-foreground"
           )}
         >
           {task.title}
-        </p>
+        </button>
         {task.recurrence_type !== "none" && (
           <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}

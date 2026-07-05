@@ -14,6 +14,7 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   projects: ["projects"] as const,
   project: (id: string) => ["projects", id] as const,
+  projectBySlug: (slug: string) => ["project-by-slug", slug] as const,
   columns: (projectId: string) => ["columns", projectId] as const,
   tasks: (projectId: string) => ["tasks", projectId] as const,
   tags: ["tags"] as const,

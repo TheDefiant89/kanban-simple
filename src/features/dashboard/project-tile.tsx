@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/dates";
+import { usePrefetchBoard } from "@/features/dashboard/use-projects";
 import type { ProjectWithStats } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -42,12 +43,19 @@ export function ProjectTile({
     project.taskCount > 0 ? Math.round((project.completedCount / project.taskCount) * 100) : 0;
   const boardUrl = `/board/${project.slug}`;
 
+  // Warm the board's data caches on hover/focus so opening it is instant.
+  const prefetchBoard = usePrefetchBoard();
+  const prefetch = () => prefetchBoard(project);
+
   return (
-    <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+    <Card
+      className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md"
+      onMouseEnter={prefetch}
+    >
       <div className="h-1.5 w-full" style={{ backgroundColor: project.color }} />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-2">
-          <Link to={boardUrl} className="min-w-0 flex-1">
+          <Link to={boardUrl} className="min-w-0 flex-1" onFocus={prefetch}>
             <h3 className="truncate font-semibold leading-tight hover:underline">{project.name}</h3>
           </Link>
           <DropdownMenu>

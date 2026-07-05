@@ -4,9 +4,9 @@
 **Stack:** Vite 6 · React 19 · TypeScript 5.7 · Tailwind 4 · Radix/shadcn · TanStack Query 5 · Supabase · dnd-kit · GitHub Pages.
 **Method:** full source read + production build with sourcemap-based per-package bundle attribution.
 
-> **Implementation status (2026-07-05):** Phases 1–2 of the roadmap are implemented on this branch.
-> Addressed: CRIT-1 (drag reorder now merges against full task lists — `src/features/board/reorder.ts`, unit-verified incl. no-op drops, cross-column moves and all-hidden columns), HIGH-1, HIGH-2 (+ a newly found `onDragCancel` gap), HIGH-4 (app chunk 113 → 56 kB gzip; vendor now stable at 74 kB), HIGH-5a, HIGH-6, MED-1 (optimistic complete/collapse/reorder), MED-2, MED-4, MED-5 (batch subtask insert), MED-9, and the quick wins from LOW-3/5/7 plus aria-labels.
-> Remaining: HIGH-3 (single-RPC reorder — writes are now minimal-per-drop but still one request per changed row; needs a DB migration), HIGH-5b (nested board query / hover prefetch), MED-3, MED-6, MED-7 (keyboard task open), MED-8, MED-10, LOW-1.
+> **Implementation status (2026-07-05):** Phases 1–4 of the roadmap are implemented on this branch.
+> Addressed: CRIT-1 (drag reorder now merges against full task lists — `src/features/board/reorder.ts`, unit-verified incl. no-op drops, cross-column moves and all-hidden columns), HIGH-1, HIGH-2 (+ a newly found `onDragCancel` gap), HIGH-3 (`reorder_tasks`/`reorder_columns` RPCs — one round trip per drop; migration `20260705000003_add_reorder_rpcs.sql`, applied to the live project), HIGH-4 (app chunk 113 → 56 kB gzip; vendor now stable at 74 kB), HIGH-5 (duplicate fetch removed + board data prefetched on tile hover/focus), HIGH-6, MED-1 (optimistic complete/collapse/reorder), MED-2, MED-3 (date-fns replaced with Intl/native Date — shared UI chunk 15.9 → 10.4 kB gzip), MED-4, MED-5 (batch subtask insert), MED-6 (single-pass stat aggregation), MED-7 (task title is a real button, keyboard-openable), MED-8 (slug/name uniqueness in one query), MED-9, LOW-1 (idle prefetch of Board/Dashboard chunks), and the quick wins from LOW-3/5/7 plus aria-labels.
+> Remaining (deliberately deferred): MED-6 server-side aggregation (client is now O(tasks) single-pass; a Postgres view only pays off at much larger data volumes), MED-10 (modular Supabase composition — maintenance risk outweighs ~20 kB gzip today), and virtualization (not justified without profiling data).
 
 ## Measured bundle baseline (gzip)
 

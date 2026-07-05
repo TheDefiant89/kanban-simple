@@ -158,6 +158,14 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      reorder_tasks: {
+        Args: { updates: { id: string; position: number; column_id?: string }[] };
+        Returns: undefined;
+      };
+      reorder_columns: {
+        Args: { updates: { id: string; position: number }[] };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

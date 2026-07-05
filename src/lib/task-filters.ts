@@ -1,14 +1,5 @@
-import {
-  endOfMonth,
-  endOfWeek,
-  isToday,
-  isTomorrow,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
 import type { TaskFilters, TaskWithRelations } from "@/types";
-import { parseDate } from "./dates";
+import { addDays, parseDate, startOfToday } from "./dates";
 
 export type TaskPredicate = (task: TaskWithRelations) => boolean;
 
@@ -39,45 +30,38 @@ export function buildTaskPredicate(filters: TaskFilters): TaskPredicate {
   };
 }
 
+/** Predicate checking the due date falls in [start, end) local time. */
+function dueBetween(start: Date, end: Date): TaskPredicate {
+  return (task) => {
+    const date = parseDate(task.due_date);
+    return !!date && date >= start && date < end;
+  };
+}
+
 function buildDueCheck(due: TaskFilters["due"]): TaskPredicate | null {
+  const today = startOfToday();
   switch (due) {
     case "completed":
       return (task) => !!task.completed_at;
-    case "overdue": {
-      const todayStart = startOfDay(new Date());
+    case "overdue":
       return (task) => {
         if (task.completed_at) return false;
         const date = parseDate(task.due_date);
-        return !!date && date < todayStart;
+        return !!date && date < today;
       };
-    }
     case "today":
-      return (task) => {
-        const date = parseDate(task.due_date);
-        return !!date && isToday(date);
-      };
+      return dueBetween(today, addDays(today, 1));
     case "tomorrow":
-      return (task) => {
-        const date = parseDate(task.due_date);
-        return !!date && isTomorrow(date);
-      };
+      return dueBetween(addDays(today, 1), addDays(today, 2));
     case "week": {
-      const now = new Date();
-      const start = startOfWeek(now, { weekStartsOn: 1 });
-      const end = endOfWeek(now, { weekStartsOn: 1 });
-      return (task) => {
-        const date = parseDate(task.due_date);
-        return !!date && date >= start && date <= end;
-      };
+      // ISO week: Monday 00:00 through the following Monday (exclusive).
+      const weekStart = addDays(today, -((today.getDay() + 6) % 7));
+      return dueBetween(weekStart, addDays(weekStart, 7));
     }
     case "month": {
-      const now = new Date();
-      const start = startOfMonth(now);
-      const end = endOfMonth(now);
-      return (task) => {
-        const date = parseDate(task.due_date);
-        return !!date && date >= start && date <= end;
-      };
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      return dueBetween(monthStart, nextMonthStart);
     }
     case "none":
       return (task) => !task.due_date;
