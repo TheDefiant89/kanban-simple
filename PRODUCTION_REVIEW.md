@@ -4,6 +4,10 @@
 **Stack:** Vite 6 · React 19 · TypeScript 5.7 · Tailwind 4 · Radix/shadcn · TanStack Query 5 · Supabase · dnd-kit · GitHub Pages.
 **Method:** full source read + production build with sourcemap-based per-package bundle attribution.
 
+> **Implementation status (2026-07-05):** Phases 1–2 of the roadmap are implemented on this branch.
+> Addressed: CRIT-1 (drag reorder now merges against full task lists — `src/features/board/reorder.ts`, unit-verified incl. no-op drops, cross-column moves and all-hidden columns), HIGH-1, HIGH-2 (+ a newly found `onDragCancel` gap), HIGH-4 (app chunk 113 → 56 kB gzip; vendor now stable at 74 kB), HIGH-5a, HIGH-6, MED-1 (optimistic complete/collapse/reorder), MED-2, MED-4, MED-5 (batch subtask insert), MED-9, and the quick wins from LOW-3/5/7 plus aria-labels.
+> Remaining: HIGH-3 (single-RPC reorder — writes are now minimal-per-drop but still one request per changed row; needs a DB migration), HIGH-5b (nested board query / hover prefetch), MED-3, MED-6, MED-7 (keyboard task open), MED-8, MED-10, LOW-1.
+
 ## Measured bundle baseline (gzip)
 
 | Chunk | Raw | Gzip | Main contents |

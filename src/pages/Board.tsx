@@ -198,14 +198,18 @@ export default function Board() {
     });
   };
 
+  // Ends a drag and marks the current data snapshot as seen (the mirror now
+  // reflects the drop result; the optimistic reorder patch re-syncs it).
+  // Returns whether query data changed mid-drag while syncing was suspended —
+  // callers that end up persisting nothing must re-sync the mirror themselves
+  // or that update would be lost until the next unrelated cache change.
   const resetDragState = () => {
+    const dataChangedDuringDrag = lastSynced.current !== displayColumns;
     isDragging.current = false;
     setActiveTask(null);
     setActiveColumn(null);
-    // The mirror now reflects the drop result; mark the current data
-    // snapshot as seen so only a later cache update (e.g. the optimistic
-    // reorder patch) re-syncs it.
     lastSynced.current = displayColumns;
+    return dataChangedDuringDrag;
   };
 
   const handleDragCancel = () => {
@@ -215,7 +219,10 @@ export default function Board() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    resetDragState();
+    const dataChangedDuringDrag = resetDragState();
+    const resyncIfStale = () => {
+      if (dataChangedDuringDrag) setItems(displayColumns);
+    };
     const { active, over } = event;
     const activeType = active.data.current?.type;
 
@@ -229,10 +236,12 @@ export default function Board() {
     if (activeType === "column") {
       const activeId = String(active.id);
       const overId = String(over.id);
-      if (activeId === overId) return;
       const oldIndex = items.findIndex((c) => c.id === activeId);
       const newIndex = items.findIndex((c) => c.id === overId);
-      if (oldIndex === -1 || newIndex === -1) return;
+      if (activeId === overId || oldIndex === -1 || newIndex === -1) {
+        resyncIfStale();
+        return;
+      }
       const reordered = arrayMove(items, oldIndex, newIndex);
       setItems(reordered);
       const updates = reordered
@@ -249,7 +258,10 @@ export default function Board() {
       originalColumnId.current = null;
 
       const colIdx = items.findIndex((c) => c.tasks.some((t) => t.id === activeId));
-      if (colIdx === -1) return;
+      if (colIdx === -1) {
+        resyncIfStale();
+        return;
+      }
 
       // Apply the final same-column position adjustment to the mirror.
       let next = items;
@@ -278,6 +290,7 @@ export default function Board() {
         updates.push(...buildPositionUpdates(merged, columnId, tasksById));
       }
       if (updates.length > 0) taskMutations.reorder.mutate(updates);
+      else resyncIfStale();
     }
   };
 
