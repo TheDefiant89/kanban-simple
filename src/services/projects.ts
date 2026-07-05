@@ -15,21 +15,24 @@ async function uniqueSlugFor(
   excludeProjectId?: string
 ): Promise<string> {
   const base = slugify(name);
-  let candidate = base;
-  let attempt = 1;
-  while (true) {
-    let query = supabase
-      .from("projects")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_archived", false)
-      .eq("slug", candidate);
-    if (excludeProjectId) query = query.neq("id", excludeProjectId);
-    const { data: existing } = await query.maybeSingle();
-    if (!existing) return candidate;
-    attempt += 1;
-    candidate = `${base}-${attempt}`;
-  }
+  // One query for every potentially-colliding slug instead of probing
+  // candidates one round trip at a time. `base` is [a-z0-9-] only, so it
+  // contains no LIKE metacharacters.
+  let query = supabase
+    .from("projects")
+    .select("slug")
+    .eq("user_id", userId)
+    .eq("is_archived", false)
+    .like("slug", `${base}%`);
+  if (excludeProjectId) query = query.neq("id", excludeProjectId);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const taken = new Set((data ?? []).map((row) => row.slug));
+  if (!taken.has(base)) return base;
+  let attempt = 2;
+  while (taken.has(`${base}-${attempt}`)) attempt += 1;
+  return `${base}-${attempt}`;
 }
 
 export async function listProjects(includeArchived = false): Promise<Project[]> {
@@ -132,19 +135,23 @@ export async function duplicateProject(project: Project): Promise<Project> {
   const userId = userData.user?.id;
   if (!userId) throw new Error("Not authenticated");
 
+  // Avoid colliding with the unique (user_id, lower(name)) constraint on
+  // active projects. One query for all candidate names; the pattern may
+  // over-match if the name contains % or _, which only means extra rows in
+  // the taken-set — the exact comparison below stays correct.
   const baseName = `${project.name} (copy)`;
+  const { data: existing, error: existingError } = await supabase
+    .from("projects")
+    .select("name")
+    .eq("user_id", userId)
+    .eq("is_archived", false)
+    .ilike("name", `${baseName}%`);
+  if (existingError) throw existingError;
+
+  const takenNames = new Set((existing ?? []).map((row) => row.name.toLowerCase()));
   let name = baseName;
   let attempt = 1;
-  // Avoid colliding with the unique (user_id, lower(name)) constraint on active projects.
-  while (true) {
-    const { data: existing } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_archived", false)
-      .ilike("name", name)
-      .maybeSingle();
-    if (!existing) break;
+  while (takenNames.has(name.toLowerCase())) {
     attempt += 1;
     name = `${baseName} ${attempt}`;
   }

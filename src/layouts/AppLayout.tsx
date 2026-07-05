@@ -76,7 +76,7 @@ export function AppLayout() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="ml-1 outline-none">
+              <button className="ml-1 outline-none" aria-label="Account menu">
                 <Avatar>
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>

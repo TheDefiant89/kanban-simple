@@ -119,14 +119,10 @@ export async function moveTask(taskId: string, columnId: string, position: numbe
 export async function reorderTasks(
   updates: { id: string; position: number; column_id?: string }[]
 ): Promise<void> {
-  await Promise.all(
-    updates.map((u) =>
-      supabase
-        .from("tasks")
-        .update({ position: u.position, ...(u.column_id ? { column_id: u.column_id } : {}) })
-        .eq("id", u.id)
-    )
-  );
+  if (updates.length === 0) return;
+  // Single round trip via RPC instead of one UPDATE request per row.
+  const { error } = await supabase.rpc("reorder_tasks", { updates });
+  if (error) throw error;
 }
 
 export async function deleteTask(taskId: string): Promise<void> {

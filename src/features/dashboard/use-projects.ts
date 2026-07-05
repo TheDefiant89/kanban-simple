@@ -11,6 +11,8 @@ import {
   updateProject,
 } from "@/services/projects";
 import { listTaskStatsForUser } from "@/services/tasks";
+import { listColumns } from "@/services/columns";
+import { listTasks } from "@/services/tasks";
 import type { Project } from "@/types";
 
 export function useProjectsWithStats(includeArchived = false) {
@@ -22,17 +24,53 @@ export function useProjectsWithStats(includeArchived = false) {
         listTaskStatsForUser(),
       ]);
 
-      return projects.map((project) => {
-        const tasksForProject = taskStats.filter((t) => t.project_id === project.id);
-        return {
-          ...project,
-          taskCount: tasksForProject.length,
-          completedCount: tasksForProject.filter((t) => t.completed_at).length,
-          overdueCount: tasksForProject.filter((t) => isOverdue(t.due_date, t.completed_at)).length,
-        };
-      });
+      // Single pass over the task rows instead of three filters per project.
+      const statsByProject = new Map<
+        string,
+        { taskCount: number; completedCount: number; overdueCount: number }
+      >();
+      for (const task of taskStats) {
+        let stats = statsByProject.get(task.project_id);
+        if (!stats) {
+          stats = { taskCount: 0, completedCount: 0, overdueCount: 0 };
+          statsByProject.set(task.project_id, stats);
+        }
+        stats.taskCount += 1;
+        if (task.completed_at) stats.completedCount += 1;
+        else if (isOverdue(task.due_date, task.completed_at)) stats.overdueCount += 1;
+      }
+
+      return projects.map((project) => ({
+        ...project,
+        taskCount: 0,
+        completedCount: 0,
+        overdueCount: 0,
+        ...statsByProject.get(project.id),
+      }));
     },
   });
+}
+
+/**
+ * Warms the board caches for a project (columns, tasks, and both project
+ * lookups) so navigating from a dashboard tile to its board renders
+ * instantly. Safe to call repeatedly — prefetchQuery dedupes in-flight
+ * requests and respects staleTime.
+ */
+export function usePrefetchBoard() {
+  const queryClient = useQueryClient();
+  return (project: Project) => {
+    queryClient.setQueryData(queryKeys.projectBySlug(project.slug), project);
+    queryClient.setQueryData(queryKeys.project(project.id), project);
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.columns(project.id),
+      queryFn: () => listColumns(project.id),
+    });
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.tasks(project.id),
+      queryFn: () => listTasks(project.id),
+    });
+  };
 }
 
 export function useCreateProject() {

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
@@ -29,7 +29,26 @@ function PageFallback() {
 
 const basename = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+// Warm the heaviest route chunks (Board pulls in dnd-kit) while the browser
+// is idle, so dashboard → board navigation doesn't pay a chunk download.
+function useIdleRoutePrefetch() {
+  useEffect(() => {
+    const prefetch = () => {
+      void import("@/pages/Board");
+      void import("@/pages/Dashboard");
+    };
+    // Safari still lacks requestIdleCallback; fall back to a timeout.
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(prefetch, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(prefetch, 2000);
+    return () => window.clearTimeout(id);
+  }, []);
+}
+
 export default function App() {
+  useIdleRoutePrefetch();
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={basename}>

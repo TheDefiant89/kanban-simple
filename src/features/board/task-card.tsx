@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CalendarClock, CheckSquare, Repeat } from "lucide-react";
@@ -10,12 +11,20 @@ import { PRIORITY_COLORS, type TaskWithRelations } from "@/types";
 
 interface TaskCardProps {
   task: TaskWithRelations;
-  onClick: () => void;
-  onToggleComplete: (completed: boolean) => void;
+  onOpen: (task: TaskWithRelations) => void;
+  onToggleComplete: (task: TaskWithRelations, completed: boolean) => void;
   dragging?: boolean;
 }
 
-export function TaskCard({ task, onClick, onToggleComplete, dragging }: TaskCardProps) {
+// Memoised: the board re-renders on every filter keystroke and drag-over
+// event, but with stable callbacks and task identities only cards whose
+// task actually changed re-render.
+export const TaskCard = memo(function TaskCard({
+  task,
+  onOpen,
+  onToggleComplete,
+  dragging,
+}: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: "task", task },
@@ -36,7 +45,7 @@ export function TaskCard({ task, onClick, onToggleComplete, dragging }: TaskCard
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
+      onClick={() => onOpen(task)}
       className={cn(
         "cursor-pointer touch-none select-none gap-0 rounded-lg border-l-4 p-3 shadow-sm transition-shadow hover:shadow-md",
         (isDragging || dragging) && "opacity-50",
@@ -47,17 +56,27 @@ export function TaskCard({ task, onClick, onToggleComplete, dragging }: TaskCard
         <Checkbox
           checked={!!task.completed_at}
           onClick={(e) => e.stopPropagation()}
-          onCheckedChange={(checked) => onToggleComplete(checked === true)}
+          onCheckedChange={(checked) => onToggleComplete(task, checked === true)}
           className="mt-0.5"
         />
-        <p
+        {/* Real button so keyboard users can open the task: Enter/Space on
+            the card itself are claimed by dnd-kit's KeyboardSensor for
+            dragging, which made the details dialog mouse-only. Keydown is
+            stopped from bubbling so activating it doesn't start a drag. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(task);
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
           className={cn(
-            "min-w-0 flex-1 text-sm font-medium leading-snug",
+            "min-w-0 flex-1 cursor-pointer text-left text-sm font-medium leading-snug",
             task.completed_at && "line-through text-muted-foreground"
           )}
         >
           {task.title}
-        </p>
+        </button>
         {task.recurrence_type !== "none" && (
           <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}
@@ -93,4 +112,4 @@ export function TaskCard({ task, onClick, onToggleComplete, dragging }: TaskCard
       </div>
     </Card>
   );
-}
+});

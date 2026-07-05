@@ -24,6 +24,26 @@ export async function createSubtask(input: {
   return data;
 }
 
+/** Batch-creates subtasks in a single insert instead of one request each. */
+export async function createSubtasks(
+  inputs: { taskId: string; title: string; position: number }[]
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+
+  const { error } = await supabase.from("subtasks").insert(
+    inputs.map((input) => ({
+      task_id: input.taskId,
+      user_id: userId,
+      title: input.title.trim(),
+      position: input.position,
+    }))
+  );
+  if (error) throw error;
+}
+
 export async function updateSubtask(
   subtaskId: string,
   updates: Partial<Pick<Subtask, "title" | "is_completed" | "position">>

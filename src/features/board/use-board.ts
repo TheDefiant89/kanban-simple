@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-client";
@@ -17,9 +18,16 @@ import { listColumns } from "@/services/columns";
 import { getProject, getProjectBySlug } from "@/services/projects";
 
 export function useProjectBySlug(slug: string) {
+  const queryClient = useQueryClient();
   return useQuery({
-    queryKey: ["project-by-slug", slug],
-    queryFn: () => getProjectBySlug(slug),
+    queryKey: queryKeys.projectBySlug(slug),
+    queryFn: async () => {
+      const project = await getProjectBySlug(slug);
+      // Seed the by-id project cache so useBoardData doesn't re-fetch the
+      // exact same row a second time on board load.
+      queryClient.setQueryData(queryKeys.project(project.id), project);
+      return project;
+    },
     enabled: !!slug,
   });
 }
@@ -43,12 +51,22 @@ export function useBoardData(projectId: string) {
     enabled: !!projectId,
   });
 
-  const columns: ColumnWithTasks[] = (columnsQuery.data ?? []).map((column) => ({
-    ...column,
-    tasks: (tasksQuery.data ?? [])
-      .filter((t) => t.column_id === column.id)
-      .sort((a, b) => a.position - b.position),
-  }));
+  // Single-pass, memoised join. Stable identities let downstream memos and
+  // React.memo components skip work when nothing actually changed.
+  const columns: ColumnWithTasks[] = useMemo(() => {
+    const tasksByColumn = new Map<string, TaskWithRelations[]>();
+    for (const task of tasksQuery.data ?? []) {
+      const bucket = tasksByColumn.get(task.column_id);
+      if (bucket) bucket.push(task);
+      else tasksByColumn.set(task.column_id, [task]);
+    }
+    for (const bucket of tasksByColumn.values()) {
+      bucket.sort((a, b) => a.position - b.position);
+    }
+    return [...(columnsQuery.data ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((column) => ({ ...column, tasks: tasksByColumn.get(column.id) ?? [] }));
+  }, [columnsQuery.data, tasksQuery.data]);
 
   return {
     project: projectQuery.data,
@@ -60,8 +78,8 @@ export function useBoardData(projectId: string) {
 
 export function useColumnMutations(projectId: string) {
   const queryClient = useQueryClient();
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.columns(projectId) });
+  const columnsKey = queryKeys.columns(projectId);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: columnsKey });
 
   const create = useMutation({
     mutationFn: createColumn,
@@ -69,11 +87,24 @@ export function useColumnMutations(projectId: string) {
     onError: (error: Error) => toast.error(error.message || "Failed to create column"),
   });
 
+  // Optimistic: collapse toggles and renames apply instantly instead of
+  // waiting a full round trip + refetch.
   const update = useMutation({
     mutationFn: ({ columnId, updates }: { columnId: string; updates: Partial<Column> }) =>
       updateColumn(columnId, updates),
-    onSuccess: invalidate,
-    onError: (error: Error) => toast.error(error.message || "Failed to update column"),
+    onMutate: async ({ columnId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: columnsKey });
+      const previous = queryClient.getQueryData<Column[]>(columnsKey);
+      queryClient.setQueryData<Column[]>(columnsKey, (old = []) =>
+        old.map((c) => (c.id === columnId ? { ...c, ...updates } : c))
+      );
+      return { previous };
+    },
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(columnsKey, context.previous);
+      toast.error(error.message || "Failed to update column");
+    },
+    onSettled: invalidate,
   });
 
   const remove = useMutation({
@@ -88,8 +119,23 @@ export function useColumnMutations(projectId: string) {
 
   const reorder = useMutation({
     mutationFn: reorderColumns,
-    onSuccess: invalidate,
-    onError: (error: Error) => toast.error(error.message || "Failed to reorder columns"),
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: columnsKey });
+      const previous = queryClient.getQueryData<Column[]>(columnsKey);
+      const positions = new Map(updates.map((u) => [u.id, u.position]));
+      queryClient.setQueryData<Column[]>(columnsKey, (old = []) =>
+        old.map((c) => {
+          const position = positions.get(c.id);
+          return position === undefined ? c : { ...c, position };
+        })
+      );
+      return { previous };
+    },
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(columnsKey, context.previous);
+      toast.error(error.message || "Failed to reorder columns");
+      invalidate();
+    },
   });
 
   return { create, update, remove, reorder };
@@ -97,7 +143,8 @@ export function useColumnMutations(projectId: string) {
 
 export function useTaskMutations(projectId: string) {
   const queryClient = useQueryClient();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(projectId) });
+  const tasksKey = queryKeys.tasks(projectId);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: tasksKey });
 
   const create = useMutation({
     mutationFn: createTask,
@@ -128,9 +175,26 @@ export function useTaskMutations(projectId: string) {
     },
   });
 
+  // Optimistic: the new order is written straight into the cache so the
+  // board re-syncs from a single source of truth while the writes are in
+  // flight; a failure rolls back and refetches.
   const reorder = useMutation({
     mutationFn: reorderTasks,
-    onError: (error: Error) => {
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: tasksKey });
+      const previous = queryClient.getQueryData<TaskWithRelations[]>(tasksKey);
+      const byId = new Map(updates.map((u) => [u.id, u]));
+      queryClient.setQueryData<TaskWithRelations[]>(tasksKey, (old = []) =>
+        old.map((task) => {
+          const u = byId.get(task.id);
+          if (!u) return task;
+          return { ...task, position: u.position, column_id: u.column_id ?? task.column_id };
+        })
+      );
+      return { previous };
+    },
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(tasksKey, context.previous);
       toast.error(error.message || "Failed to reorder tasks");
       invalidate();
     },
@@ -154,14 +218,28 @@ export function useTaskMutations(projectId: string) {
     onError: (error: Error) => toast.error(error.message || "Failed to duplicate task"),
   });
 
+  // Optimistic: checkbox toggles reflect instantly; the settled refetch
+  // reconciles the server-assigned timestamp.
   const setCompleted = useMutation({
     mutationFn: ({ task, completed }: { task: TaskWithRelations; completed: boolean }) =>
       updateTask(task.id, { completed_at: completed ? new Date().toISOString() : null }),
+    onMutate: async ({ task, completed }) => {
+      await queryClient.cancelQueries({ queryKey: tasksKey });
+      const previous = queryClient.getQueryData<TaskWithRelations[]>(tasksKey);
+      const completedAt = completed ? new Date().toISOString() : null;
+      queryClient.setQueryData<TaskWithRelations[]>(tasksKey, (old = []) =>
+        old.map((t) => (t.id === task.id ? { ...t, completed_at: completedAt } : t))
+      );
+      return { previous };
+    },
     onSuccess: (_, { completed }) => {
-      invalidate();
       if (completed) toast.success("Task completed");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to update task"),
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(tasksKey, context.previous);
+      toast.error(error.message || "Failed to update task");
+    },
+    onSettled: invalidate,
   });
 
   return { create, update, move, reorder, remove, duplicate, setCompleted };

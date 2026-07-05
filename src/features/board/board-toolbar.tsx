@@ -61,6 +61,7 @@ export function BoardToolbar({
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search tasks…"
+          aria-label="Search tasks"
           className="pl-8"
           value={filters.search}
           onChange={(e) => onSearchChange(e.target.value)}
