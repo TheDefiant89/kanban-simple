@@ -129,7 +129,10 @@ export function BoardToolbar({
               onSelect={(e) => e.preventDefault()}
               onCheckedChange={() => onToggleTag(tag.id)}
             >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              <span
+                className="mr-2 h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: tag.color }}
+              />
               {tag.name}
             </DropdownMenuCheckboxItem>
           ))}
