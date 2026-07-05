@@ -32,9 +32,11 @@ import {
   useProjectsWithStats,
   useUpdateProject,
 } from "@/features/dashboard/use-projects";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import type { ProjectSortKey, ProjectWithStats } from "@/types";
 
 export default function Dashboard() {
+  useDocumentTitle("Dashboard");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<ProjectSortKey>("updated");
   const [showArchived, setShowArchived] = useState(false);

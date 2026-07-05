@@ -24,8 +24,10 @@ import { signOut, changePassword } from "@/services/auth";
 import { deleteOwnAccount } from "@/services/account";
 import { exportUserDataAsCsv } from "@/services/export";
 import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/schemas";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export default function Settings() {
+  useDocumentTitle("Settings");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [changingPassword, setChangingPassword] = useState(false);

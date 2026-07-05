@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/dates";
 import type { ProjectWithStats } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 
 interface ProjectTileProps {
   project: ProjectWithStats;
@@ -40,13 +40,14 @@ export function ProjectTile({
 }: ProjectTileProps) {
   const progress =
     project.taskCount > 0 ? Math.round((project.completedCount / project.taskCount) * 100) : 0;
+  const boardUrl = `/board/${project.id}/${slugify(project.name)}`;
 
   return (
     <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
       <div className="h-1.5 w-full" style={{ backgroundColor: project.color }} />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-2">
-          <Link to={`/board/${project.id}`} className="min-w-0 flex-1">
+          <Link to={boardUrl} className="min-w-0 flex-1">
             <h3 className="truncate font-semibold leading-tight hover:underline">{project.name}</h3>
           </Link>
           <DropdownMenu>
@@ -62,7 +63,7 @@ export function ProjectTile({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link to={`/board/${project.id}`}>
+                <Link to={boardUrl}>
                   <ListTodo className="h-4 w-4" /> Open
                 </Link>
               </DropdownMenuItem>

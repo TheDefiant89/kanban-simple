@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
@@ -42,13 +42,29 @@ import { useBoardData, useColumnMutations, useTaskMutations } from "@/features/b
 import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { matchesFilters } from "@/lib/task-filters";
+import { useDocumentTitle } from "@/lib/use-document-title";
+import { slugify } from "@/lib/utils";
 import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 export default function Board() {
-  const params = useParams<{ projectId: string }>();
+  const params = useParams<{ projectId: string; slug?: string }>();
   const projectId = params.projectId ?? "";
+  const navigate = useNavigate();
 
   const { project, columns, isLoading } = useBoardData(projectId);
+  useDocumentTitle(project?.name);
+
+  // Keep the cosmetic URL slug in sync with the project's current name
+  // (e.g. after a rename), without affecting data fetching — projectId
+  // alone drives that. Skipped for stale/missing slugs on initial load.
+  useEffect(() => {
+    if (!project) return;
+    const canonicalSlug = slugify(project.name);
+    if (params.slug !== canonicalSlug) {
+      navigate(`/board/${project.id}/${canonicalSlug}`, { replace: true });
+    }
+  }, [project, params.slug, navigate]);
+
   const columnMutations = useColumnMutations(projectId);
   const taskMutations = useTaskMutations(projectId);
   const { data: tags = [] } = useTags();
