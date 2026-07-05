@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updatePassword } from "@/services/auth";
+import { signOut, updatePassword } from "@/services/auth";
+import { useAuth } from "@/features/auth/auth-context";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/features/auth/schemas";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { user, loading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -24,6 +26,10 @@ export default function ResetPassword() {
     setSubmitting(true);
     try {
       await updatePassword(values.password);
+      // Consume the recovery session immediately so the same reset-password
+      // link/session can't be replayed to change the password again.
+      clearPasswordRecovery();
+      await signOut();
       toast.success("Password updated. Please sign in again.");
       navigate("/login", { replace: true });
     } catch (error) {
@@ -32,6 +38,22 @@ export default function ResetPassword() {
       setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-40 items-center justify-center">
+        <LayoutGrid className="h-8 w-8 animate-pulse text-primary" />
+      </div>
+    );
+  }
+
+  // Only a session that actually resulted from clicking a reset-password
+  // email link (a Supabase PASSWORD_RECOVERY event) may use this page —
+  // an ordinary live session must go through Settings' re-authenticated
+  // change-password flow instead.
+  if (!isPasswordRecovery) {
+    return <Navigate to={user ? "/settings" : "/login"} replace />;
+  }
 
   return (
     <div className="flex flex-col gap-5">
