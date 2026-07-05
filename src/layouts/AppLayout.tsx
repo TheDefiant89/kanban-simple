@@ -41,7 +41,7 @@ export function AppLayout() {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <LayoutGrid className="h-4 w-4" />
           </div>
-          {!isBoardRoute && <span className="hidden sm:inline">Kanban</span>}
+          {!isBoardRoute && <span className="hidden sm:inline">Kanban. Simple.</span>}
         </Link>
 
         <div className="ml-auto flex items-center gap-1.5">
