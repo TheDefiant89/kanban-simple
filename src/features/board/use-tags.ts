@@ -10,6 +10,9 @@ export function useTags() {
 export function useTagMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.tags });
+  // Tags are embedded in cached task lists (task_tags -> tags join), so any
+  // change to a tag's name/color or its removal must also refresh those.
+  const invalidateTasks = () => queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll });
 
   const create = useMutation({
     mutationFn: createTag,
@@ -25,13 +28,19 @@ export function useTagMutations() {
       tagId: string;
       updates: { name?: string; color?: string };
     }) => updateTag(tagId, updates),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateTasks();
+    },
     onError: (error: Error) => toast.error(error.message || "Failed to update tag"),
   });
 
   const remove = useMutation({
     mutationFn: deleteTag,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateTasks();
+    },
     onError: (error: Error) => toast.error(error.message || "Failed to delete tag"),
   });
 

@@ -17,5 +17,6 @@ export const queryKeys = {
   projectBySlug: (slug: string) => ["project-by-slug", slug] as const,
   columns: (projectId: string) => ["columns", projectId] as const,
   tasks: (projectId: string) => ["tasks", projectId] as const,
+  tasksAll: ["tasks"] as const,
   tags: ["tags"] as const,
 };
