@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Download, KeyRound, Loader2, LogOut, ShieldAlert } from "lucide-react";
+import { Download, KeyRound, Loader2, LogOut, ShieldAlert, Tag as TagIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import { deleteOwnAccount } from "@/services/account";
 import { exportUserDataAsCsv } from "@/services/export";
 import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/schemas";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { TagManager } from "@/features/settings/tag-manager";
 
 export default function Settings() {
   useDocumentTitle("Settings");
@@ -169,6 +170,21 @@ export default function Settings() {
           <Button variant="outline" className="self-start" onClick={handleSignOut}>
             <LogOut className="h-4 w-4" /> Sign out
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TagIcon className="h-4 w-4" /> Tags
+          </CardTitle>
+          <CardDescription>
+            Create, rename, recolor or delete tags. Deleting a tag removes it from every task it's
+            applied to.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TagManager />
         </CardContent>
       </Card>
 
