@@ -1,6 +1,36 @@
 import { supabase } from "@/supabase/client";
 import type { Project } from "@/types";
 import { DEFAULT_COLUMNS } from "@/types";
+import { slugify } from "@/lib/utils";
+
+/**
+ * Finds a slug for `name` that isn't already used by one of the user's other
+ * active projects, appending -2, -3, ... on collision — mirrors the
+ * (user_id, lower(name)) uniqueness handling in duplicateProject below, but
+ * against the (user_id, slug) unique index.
+ */
+async function uniqueSlugFor(
+  name: string,
+  userId: string,
+  excludeProjectId?: string
+): Promise<string> {
+  const base = slugify(name);
+  let candidate = base;
+  let attempt = 1;
+  while (true) {
+    let query = supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_archived", false)
+      .eq("slug", candidate);
+    if (excludeProjectId) query = query.neq("id", excludeProjectId);
+    const { data: existing } = await query.maybeSingle();
+    if (!existing) return candidate;
+    attempt += 1;
+    candidate = `${base}-${attempt}`;
+  }
+}
 
 export async function listProjects(includeArchived = false): Promise<Project[]> {
   let query = supabase.from("projects").select("*").order("updated_at", { ascending: false });
@@ -16,6 +46,17 @@ export async function getProject(projectId: string): Promise<Project> {
   return data;
 }
 
+export async function getProjectBySlug(slug: string): Promise<Project> {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_archived", false)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function createProject(input: {
   name: string;
   description?: string;
@@ -26,11 +67,15 @@ export async function createProject(input: {
   const userId = userData.user?.id;
   if (!userId) throw new Error("Not authenticated");
 
+  const name = input.name.trim();
+  const slug = await uniqueSlugFor(name, userId);
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({
       user_id: userId,
-      name: input.name.trim(),
+      name,
+      slug,
       description: input.description?.trim() || null,
       color: input.color,
     })
@@ -56,9 +101,19 @@ export async function updateProject(
   projectId: string,
   updates: Partial<Pick<Project, "name" | "description" | "color" | "is_archived">>
 ): Promise<Project> {
+  const patch: Partial<Project> = { ...updates };
+
+  if (updates.name) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    const userId = userData.user?.id;
+    if (!userId) throw new Error("Not authenticated");
+    patch.slug = await uniqueSlugFor(updates.name, userId, projectId);
+  }
+
   const { data, error } = await supabase
     .from("projects")
-    .update(updates)
+    .update(patch)
     .eq("id", projectId)
     .select()
     .single();
@@ -93,12 +148,14 @@ export async function duplicateProject(project: Project): Promise<Project> {
     attempt += 1;
     name = `${baseName} ${attempt}`;
   }
+  const slug = await uniqueSlugFor(name, userId);
 
   const { data: newProject, error } = await supabase
     .from("projects")
     .insert({
       user_id: userId,
       name,
+      slug,
       description: project.description,
       color: project.color,
     })

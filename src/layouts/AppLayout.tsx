@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { LayoutGrid, LogOut, Moon, Settings, Sun, SunMoon } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-context";
 import { signOut } from "@/services/auth";
@@ -19,7 +19,6 @@ export function AppLayout() {
   const { user } = useAuth();
   const { theme, setTheme } = useThemeStore();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSignOut = async () => {
     try {
@@ -32,7 +31,6 @@ export function AppLayout() {
   };
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
-  const isBoardRoute = location.pathname.startsWith("/board/");
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -41,7 +39,7 @@ export function AppLayout() {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <LayoutGrid className="h-4 w-4" />
           </div>
-          {!isBoardRoute && <span className="hidden sm:inline">Kanban. Simple.</span>}
+          <span className="hidden sm:inline">Kanban. Simple.</span>
         </Link>
 
         <div className="ml-auto flex items-center gap-1.5">

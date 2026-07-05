@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/dates";
 import type { ProjectWithStats } from "@/types";
-import { cn, slugify } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface ProjectTileProps {
   project: ProjectWithStats;
@@ -40,7 +40,7 @@ export function ProjectTile({
 }: ProjectTileProps) {
   const progress =
     project.taskCount > 0 ? Math.round((project.completedCount / project.taskCount) * 100) : 0;
-  const boardUrl = `/board/${project.id}/${slugify(project.name)}`;
+  const boardUrl = `/board/${project.slug}`;
 
   return (
     <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">

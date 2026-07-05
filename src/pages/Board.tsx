@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useMemo, useRef, useState, type RefObject } from "react";
+import { Link, useParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
@@ -38,32 +38,28 @@ import { ColumnDialog } from "@/features/board/column-dialog";
 import { BoardToolbar } from "@/features/board/board-toolbar";
 import { TaskCard } from "@/features/board/task-card";
 import { TaskDetailDialog } from "@/features/tasks/task-detail-dialog";
-import { useBoardData, useColumnMutations, useTaskMutations } from "@/features/board/use-board";
+import {
+  useBoardData,
+  useColumnMutations,
+  useProjectBySlug,
+  useTaskMutations,
+} from "@/features/board/use-board";
 import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { matchesFilters } from "@/lib/task-filters";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { slugify } from "@/lib/utils";
 import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 export default function Board() {
-  const params = useParams<{ projectId: string; slug?: string }>();
-  const projectId = params.projectId ?? "";
-  const navigate = useNavigate();
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug ?? "";
 
-  const { project, columns, isLoading } = useBoardData(projectId);
+  const slugLookup = useProjectBySlug(slug);
+  const projectId = slugLookup.data?.id ?? "";
+
+  const { project, columns, isLoading: boardDataLoading } = useBoardData(projectId);
+  const isLoading = slugLookup.isLoading || (!!projectId && boardDataLoading);
   useDocumentTitle(project?.name);
-
-  // Keep the cosmetic URL slug in sync with the project's current name
-  // (e.g. after a rename), without affecting data fetching — projectId
-  // alone drives that. Skipped for stale/missing slugs on initial load.
-  useEffect(() => {
-    if (!project) return;
-    const canonicalSlug = slugify(project.name);
-    if (params.slug !== canonicalSlug) {
-      navigate(`/board/${project.id}/${canonicalSlug}`, { replace: true });
-    }
-  }, [project, params.slug, navigate]);
 
   const columnMutations = useColumnMutations(projectId);
   const taskMutations = useTaskMutations(projectId);

@@ -18,6 +18,7 @@ export type Project = {
   id: string;
   user_id: string;
   name: string;
+  slug: string;
   description: string | null;
   color: string;
   is_archived: boolean;

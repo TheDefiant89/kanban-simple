@@ -14,7 +14,15 @@ import {
   type UpdateTaskInput,
 } from "@/services/tasks";
 import { listColumns } from "@/services/columns";
-import { getProject } from "@/services/projects";
+import { getProject, getProjectBySlug } from "@/services/projects";
+
+export function useProjectBySlug(slug: string) {
+  return useQuery({
+    queryKey: ["project-by-slug", slug],
+    queryFn: () => getProjectBySlug(slug),
+    enabled: !!slug,
+  });
+}
 
 export function useBoardData(projectId: string) {
   const projectQuery = useQuery({

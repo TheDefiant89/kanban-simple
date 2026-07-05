@@ -52,7 +52,7 @@ export default function App() {
                 <Route element={<ProtectedRoute />}>
                   <Route element={<AppLayout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/board/:projectId/:slug?" element={<Board />} />
+                    <Route path="/board/:slug" element={<Board />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
                 </Route>
