@@ -22,7 +22,7 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-VoRtu49JBwuB7fq8gxlR/oIrGHGgXNxiM6juKGyolsE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-VoRtu49JBwuB7fq8gxlR/oIrGHGgXNxiM6juKGyolsE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' %VITE_SUPABASE_URL%; base-uri 'self'; object-src 'none'"
     />
     <title>Kanban. Simple.</title>
     <script>
