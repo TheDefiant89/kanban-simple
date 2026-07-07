@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/shared/color-picker";
 import type { Column } from "@/types";
+import { columnNameSchema } from "./schemas";
 
 const COLUMN_COLORS = [
   "#94a3b8",
@@ -53,12 +54,13 @@ export function ColumnDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Column name is required");
+    const result = columnNameSchema.safeParse(name);
+    if (!result.success) {
+      setError(result.error.issues[0].message);
       return;
     }
     try {
-      await onSubmit({ name: name.trim(), color });
+      await onSubmit({ name: result.data, color });
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
@@ -85,6 +87,7 @@ export function ColumnDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. In Review"
+              maxLength={100}
             />
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>

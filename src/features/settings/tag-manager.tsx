@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Tag as TagIcon, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,6 +17,7 @@ import {
 import { ColorPicker } from "@/components/shared/color-picker";
 import { useTagMutations, useTags } from "@/features/board/use-tags";
 import { PROJECT_COLORS, type Tag } from "@/types";
+import { tagNameSchema } from "./schemas";
 
 function ColorSwatchButton({
   color,
@@ -64,8 +66,14 @@ function TagRow({ tag }: { tag: Tag }) {
       setName(tag.name);
       return;
     }
+    const result = tagNameSchema.safeParse(trimmed);
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      setName(tag.name);
+      return;
+    }
     try {
-      await update.mutateAsync({ tagId: tag.id, updates: { name: trimmed } });
+      await update.mutateAsync({ tagId: tag.id, updates: { name: result.data } });
     } catch {
       setName(tag.name);
     }
@@ -95,6 +103,7 @@ function TagRow({ tag }: { tag: Tag }) {
         }}
         className="h-8 flex-1"
         aria-label="Tag name"
+        maxLength={50}
       />
 
       <Button
@@ -139,9 +148,14 @@ export function TagManager() {
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
 
   const handleCreate = async () => {
-    const name = newName.trim();
-    if (!name) return;
-    await create.mutateAsync({ name, color: newColor });
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const result = tagNameSchema.safeParse(trimmed);
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return;
+    }
+    await create.mutateAsync({ name: result.data, color: newColor });
     setNewName("");
     setNewColor(PROJECT_COLORS[0]);
   };
@@ -174,6 +188,7 @@ export function TagManager() {
           onChange={(e) => setNewName(e.target.value)}
           className="h-8 flex-1"
           aria-label="New tag name"
+          maxLength={50}
         />
         <Button type="submit" size="sm" disabled={create.isPending || !newName.trim()}>
           {create.isPending ? (
