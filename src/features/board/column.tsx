@@ -58,8 +58,15 @@ export const ColumnComponent = memo(function ColumnComponent({
       <div
         ref={setNodeRef}
         style={style}
-        className="flex h-full w-11 shrink-0 flex-col items-center gap-2 rounded-xl border bg-muted/40 py-3"
+        className="relative flex h-full w-11 shrink-0 flex-col items-center gap-2 overflow-hidden rounded-xl border bg-panel py-3"
       >
+        <span
+          className="neon absolute inset-x-0 top-0 h-[3px]"
+          style={{
+            background: `linear-gradient(90deg, ${column.color}, ${column.color}40)`,
+            ["--glow-c" as string]: column.color,
+          }}
+        />
         <button
           {...attributes}
           {...listeners}
@@ -74,7 +81,7 @@ export const ColumnComponent = memo(function ColumnComponent({
           >
             {column.tasks.length}
           </span>
-          <span className="mt-1 rotate-180 whitespace-nowrap text-xs font-medium [writing-mode:vertical-rl]">
+          <span className="font-display mt-1 rotate-180 whitespace-nowrap text-xs font-semibold [writing-mode:vertical-rl]">
             {column.name}
           </span>
         </button>
@@ -87,21 +94,30 @@ export const ColumnComponent = memo(function ColumnComponent({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col rounded-xl border bg-muted/40",
+        "relative flex h-full w-72 shrink-0 flex-col overflow-hidden rounded-xl border bg-panel",
         isDragging && "opacity-50"
       )}
     >
+      <span
+        className="neon absolute inset-x-0 top-0 z-10 h-[3px]"
+        style={{
+          background: `linear-gradient(90deg, ${column.color}, ${column.color}40)`,
+          ["--glow-c" as string]: column.color,
+        }}
+      />
       <div
         {...attributes}
         {...listeners}
-        className="flex shrink-0 cursor-grab items-center gap-2 rounded-t-xl border-b px-3 py-2.5 active:cursor-grabbing"
+        className="flex shrink-0 cursor-grab items-center gap-2 border-b px-3 pb-2.5 pt-3 active:cursor-grabbing"
       >
         <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: column.color }}
+          className="neon-sm h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: column.color, ["--glow-c" as string]: column.color }}
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{column.name}</span>
-        <span className="rounded-full bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
+        <span className="font-display min-w-0 flex-1 truncate text-sm font-semibold">
+          {column.name}
+        </span>
+        <span className="rounded-full border bg-panel-2 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
           {column.tasks.length}
         </span>
         <Button

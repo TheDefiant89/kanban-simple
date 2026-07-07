@@ -22,7 +22,7 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-VoRtu49JBwuB7fq8gxlR/oIrGHGgXNxiM6juKGyolsE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' %VITE_SUPABASE_URL%; base-uri 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-mHegTjg5uvXBjcTeXY6laNbE/oKRffp1bPWMXHqBaxA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' %VITE_SUPABASE_URL%; base-uri 'self'; object-src 'none'"
     />
     <title>Kanban. Simple.</title>
     <script>
@@ -48,7 +48,7 @@
       (function () {
         try {
           var stored = JSON.parse(localStorage.getItem("kanban-theme") || "null");
-          var theme = stored && stored.state ? stored.state.theme : "system";
+          var theme = stored && stored.state ? stored.state.theme : "dark";
           var isDark =
             theme === "dark" ||
             (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);

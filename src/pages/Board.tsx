@@ -361,8 +361,11 @@ export default function Board() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: project.color }} />
-        <h1 className="truncate text-lg font-semibold">{project.name}</h1>
+        <span
+          className="neon-sm h-3 w-3 rounded-full"
+          style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
+        />
+        <h1 className="font-display truncate text-lg font-semibold">{project.name}</h1>
       </div>
 
       <BoardToolbar

@@ -3,51 +3,108 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+   Fonts — self-hosted (variable) so they work offline and under the app's
+   strict CSP without an external font CDN.
+   - Space Grotesk: wordmark, headings, numeric labels.
+   - Manrope: all UI / body text.
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../assets/fonts/Manrope.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("../assets/fonts/SpaceGrotesk.woff2") format("woff2");
+}
+
+/* ---------------------------------------------------------------------------
+   Theme tokens — "Slate" surface with a Cyan neon accent (the locked
+   redesign config). Light is the default :root; dark overrides via .dark.
+   --------------------------------------------------------------------------- */
 :root {
   --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  /* Raw surface tokens (Slate, light) */
+  --panel: oklch(0.965 0.006 264);
+  --panel-2: oklch(1 0 0);
+  --border-strong: oklch(0.86 0.008 264);
+  --hdr: oklch(0.99 0.003 264 / 0.75);
+  --elev: 0 1px 2px oklch(0.2 0 0 / 0.06);
+
+  /* Neon accent — Cyan (light primary is a deeper cyan for contrast) */
+  --accent-solid: #0aa6c4;
+  --accent-glow: #22d3ee;
+  --accent-grad: linear-gradient(135deg, #3fd8ee, #22d3ee);
+  /* Glow alpha (intensity 60% → light gi = 0.3): 0.55*gi, 0.30*gi */
+  --glow-a: 16%;
+  --glow-b: 9%;
+
+  /* shadcn/ui semantic tokens mapped onto the Slate surface */
+  --background: oklch(0.98 0.004 264);
+  --foreground: oklch(0.2 0.01 264);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.2 0.01 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.22 264);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0.01 264);
-  --secondary-foreground: oklch(0.2 0 0);
-  --muted: oklch(0.96 0.01 264);
+  --popover-foreground: oklch(0.2 0.01 264);
+  --primary: #0aa6c4;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(1 0 0);
+  --secondary-foreground: oklch(0.2 0.01 264);
+  --muted: oklch(0.965 0.006 264);
   --muted-foreground: oklch(0.5 0.02 264);
-  --accent: oklch(0.95 0.03 264);
-  --accent-foreground: oklch(0.2 0 0);
+  --accent: oklch(1 0 0);
+  --accent-foreground: oklch(0.2 0.01 264);
   --destructive: oklch(0.58 0.24 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.9 0.005 264);
-  --input: oklch(0.9 0.005 264);
-  --ring: oklch(0.55 0.22 264);
+  --border: oklch(0.9 0.006 264);
+  --input: oklch(0.9 0.006 264);
+  --ring: oklch(0.72 0.13 210);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.75 0.16 75);
 }
 
 .dark {
-  --background: oklch(0.16 0.01 264);
+  /* Raw surface tokens (Slate, dark) */
+  --panel: oklch(0.195 0.013 264);
+  --panel-2: oklch(0.215 0.015 264);
+  --border-strong: oklch(1 0 0 / 0.14);
+  --hdr: oklch(0.17 0.012 264 / 0.72);
+  --elev: 0 2px 8px oklch(0 0 0 / 0.4);
+
+  /* Neon accent — Cyan (brighter primary in the dark) */
+  --accent-solid: #3fd8ee;
+  --accent-glow: #22d3ee;
+  --accent-grad: linear-gradient(135deg, #3fd8ee, #22d3ee);
+  /* Glow alpha (intensity 60% → dark gi = 0.6): 0.55*gi, 0.30*gi */
+  --glow-a: 33%;
+  --glow-b: 18%;
+
+  --background: oklch(0.155 0.012 264);
   --foreground: oklch(0.96 0 0);
-  --card: oklch(0.2 0.012 264);
+  --card: oklch(0.225 0.016 264);
   --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.2 0.012 264);
+  --popover: oklch(0.195 0.013 264);
   --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.7 0.18 264);
-  --primary-foreground: oklch(0.15 0 0);
-  --secondary: oklch(0.26 0.015 264);
+  --primary: #3fd8ee;
+  --primary-foreground: oklch(0.16 0.02 240);
+  --secondary: oklch(0.215 0.015 264);
   --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.26 0.015 264);
+  --muted: oklch(0.215 0.015 264);
   --muted-foreground: oklch(0.66 0.02 264);
-  --accent: oklch(0.3 0.03 264);
+  --accent: oklch(0.215 0.015 264);
   --accent-foreground: oklch(0.96 0 0);
   --destructive: oklch(0.65 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.6 0.18 264);
+  --border: oklch(1 0 0 / 0.1);
+  --input: oklch(1 0 0 / 0.14);
+  --ring: oklch(0.8 0.12 205);
   --success: oklch(0.68 0.17 145);
   --warning: oklch(0.8 0.16 75);
 }
@@ -75,15 +132,25 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
 
+  /* Extra surface colors usable as bg-panel / bg-panel-2 / border-border-strong */
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-border-strong: var(--border-strong);
+
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Manrope", ui-sans-serif, system-ui, sans-serif;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-slide-up: slide-up 0.2s ease-out;
+  --animate-fade-in: kb-fade 0.22s ease-out;
+  --animate-slide-up: kb-pop 0.28s ease-out;
+  --animate-pop: kb-pop 0.28s ease both;
+  --animate-slide-in-right: kb-slide 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-  @keyframes fade-in {
+  @keyframes kb-fade {
     from {
       opacity: 0;
     }
@@ -91,14 +158,24 @@
       opacity: 1;
     }
   }
-  @keyframes slide-up {
+  @keyframes kb-pop {
     from {
       opacity: 0;
-      transform: translateY(4px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+  @keyframes kb-slide {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
     }
   }
 }
@@ -109,14 +186,48 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: var(--font-sans);
   }
   ::selection {
-    @apply bg-primary/20;
+    background: color-mix(in srgb, var(--accent-glow) 24%, transparent);
   }
 }
 
 @layer utilities {
+  /* Space Grotesk display face for the wordmark, headings and numeric labels */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* --- Neon glow -------------------------------------------------------------
+     Two-layer edge glow. Color comes from --glow-c (defaults to the cyan
+     accent); set it inline for column/priority/tag/project colors, e.g.
+     style={{ ["--glow-c"]: task.color }}. The per-theme alpha (--glow-a/b)
+     keeps the locked 60% intensity subtle in dark and softer in light. */
+  .neon {
+    --glow-c: var(--accent-glow);
+    box-shadow:
+      0 0 8px color-mix(in srgb, var(--glow-c) var(--glow-a), transparent),
+      0 0 20px color-mix(in srgb, var(--glow-c) var(--glow-b), transparent);
+  }
+  .neon-sm {
+    --glow-c: var(--accent-glow);
+    box-shadow:
+      0 0 5px color-mix(in srgb, var(--glow-c) var(--glow-a), transparent),
+      0 0 12px color-mix(in srgb, var(--glow-c) var(--glow-b), transparent);
+  }
+  .neon-lg {
+    --glow-c: var(--accent-glow);
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--glow-c) var(--glow-a), transparent),
+      0 0 28px color-mix(in srgb, var(--glow-c) var(--glow-b), transparent);
+  }
+
+  .bg-accent-grad {
+    background-image: var(--accent-grad);
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
   }
@@ -125,7 +236,7 @@
     height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--border);
+    background-color: var(--border-strong);
     border-radius: 999px;
   }
 }

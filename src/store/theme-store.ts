@@ -19,7 +19,8 @@ function applyTheme(theme: Theme) {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: "system",
+      // Redesign ships Dark as the default (light fully supported via toggle).
+      theme: "dark",
       setTheme: (theme) => {
         applyTheme(theme);
         set({ theme });

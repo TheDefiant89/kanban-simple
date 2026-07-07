@@ -3,7 +3,6 @@ import { LayoutGrid, LogOut, Moon, Settings, Sun, SunMoon } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-context";
 import { signOut } from "@/services/auth";
 import { useThemeStore } from "@/store/theme-store";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NeonBackdrop } from "@/components/shared/neon-backdrop";
 import { toast } from "sonner";
 
 export function AppLayout() {
@@ -32,20 +32,30 @@ export function AppLayout() {
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
 
+  const iconBtn =
+    "flex h-9 w-9 items-center justify-center rounded-[9px] border border-border bg-transparent text-muted-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)] hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-background">
+      <NeonBackdrop />
+      <header
+        className="sticky top-0 z-40 flex h-[58px] items-center gap-3 border-b px-4 backdrop-blur-[14px]"
+        style={{ background: "var(--hdr)" }}
+      >
+        <Link to="/dashboard" className="flex items-center gap-2.5">
+          <div className="bg-accent-grad neon flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-white">
             <LayoutGrid className="h-4 w-4" />
           </div>
-          <span className="hidden sm:inline">Kanban. Simple.</span>
+          <span className="font-display hidden text-[16px] font-semibold sm:inline">
+            Kanban<span style={{ color: "var(--accent-solid)" }}>.</span> Simple
+            <span style={{ color: "var(--accent-solid)" }}>.</span>
+          </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Toggle theme">
+              <button className={iconBtn} aria-label="Toggle theme">
                 {theme === "dark" ? (
                   <Moon className="h-4 w-4" />
                 ) : theme === "light" ? (
@@ -53,7 +63,7 @@ export function AppLayout() {
                 ) : (
                   <SunMoon className="h-4 w-4" />
                 )}
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTheme("light")}>
@@ -68,17 +78,17 @@ export function AppLayout() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="ghost" size="icon" asChild aria-label="Settings">
-            <Link to="/settings">
-              <Settings className="h-4 w-4" />
-            </Link>
-          </Button>
+          <Link to="/settings" className={iconBtn} aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Link>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="ml-1 outline-none" aria-label="Account menu">
-                <Avatar>
-                  <AvatarFallback>{initials}</AvatarFallback>
+              <button className="ml-0.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Account menu">
+                <Avatar className="h-[34px] w-[34px]">
+                  <AvatarFallback className="bg-accent-grad text-[13px] font-semibold text-white">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
@@ -96,7 +106,7 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <Outlet />
       </main>
     </div>

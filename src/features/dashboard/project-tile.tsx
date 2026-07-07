@@ -49,14 +49,26 @@ export function ProjectTile({
 
   return (
     <Card
-      className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md"
+      className="group flex flex-col overflow-hidden bg-panel transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
       onMouseEnter={prefetch}
     >
-      <div className="h-1.5 w-full" style={{ backgroundColor: project.color }} />
+      <div
+        className="neon h-1 w-full"
+        style={{
+          background: `linear-gradient(90deg, ${project.color}, ${project.color}33)`,
+          ["--glow-c" as string]: project.color,
+        }}
+      />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-2">
-          <Link to={boardUrl} className="min-w-0 flex-1" onFocus={prefetch}>
-            <h3 className="truncate font-semibold leading-tight hover:underline">{project.name}</h3>
+          <Link to={boardUrl} className="flex min-w-0 flex-1 items-center gap-2" onFocus={prefetch}>
+            <span
+              className="neon-sm h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
+            />
+            <h3 className="font-display truncate font-semibold leading-tight hover:underline">
+              {project.name}
+            </h3>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -105,10 +117,14 @@ export function ProjectTile({
         )}
 
         <div className="mt-auto flex flex-col gap-3 pt-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-panel-2">
             <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${progress}%` }}
+              className="neon-sm h-full rounded-full transition-all"
+              style={{
+                width: `${progress}%`,
+                background: `linear-gradient(90deg, ${project.color}, ${project.color}b3)`,
+                ["--glow-c" as string]: project.color,
+              }}
             />
           </div>
 

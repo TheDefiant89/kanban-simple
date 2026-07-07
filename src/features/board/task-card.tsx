@@ -47,9 +47,9 @@ export const TaskCard = memo(function TaskCard({
       {...listeners}
       onClick={() => onOpen(task)}
       className={cn(
-        "cursor-pointer touch-none select-none gap-0 rounded-lg border-l-4 p-3 shadow-sm transition-shadow hover:shadow-md",
+        "animate-pop cursor-pointer touch-none select-none gap-0 rounded-[11px] border-l-[3px] p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md",
         (isDragging || dragging) && "opacity-50",
-        task.completed_at && "opacity-70"
+        task.completed_at && "opacity-60"
       )}
     >
       <div className="flex items-start gap-2">
@@ -87,8 +87,12 @@ export const TaskCard = memo(function TaskCard({
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+              className="rounded-full border px-2 py-0.5 text-[10.5px] font-semibold"
+              style={{
+                backgroundColor: `${tag.color}2e`,
+                color: tag.color,
+                borderColor: `${tag.color}52`,
+              }}
             >
               {tag.name}
             </span>
