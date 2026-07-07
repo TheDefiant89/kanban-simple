@@ -15,8 +15,11 @@ export function PriorityBadge({ priority, className }: { priority: Priority; cla
       }}
     >
       <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ backgroundColor: PRIORITY_COLORS[priority] }}
+        className="neon-sm h-1.5 w-1.5 rounded-full"
+        style={{
+          backgroundColor: PRIORITY_COLORS[priority],
+          ["--glow-c" as string]: PRIORITY_COLORS[priority],
+        }}
       />
       {PRIORITY_LABELS[priority]}
     </span>
