@@ -17,7 +17,7 @@ import {
 import { ColorPicker } from "@/components/shared/color-picker";
 import { useTagMutations, useTags } from "@/features/board/use-tags";
 import { PROJECT_COLORS, type Tag } from "@/types";
-import { tagNameSchema } from "./schemas";
+import { tagColorSchema, tagNameSchema } from "./schemas";
 
 function ColorSwatchButton({
   color,
@@ -80,9 +80,13 @@ function TagRow({ tag }: { tag: Tag }) {
   };
 
   const handleColorChange = (color: string) => {
-    if (color !== tag.color) {
-      update.mutate({ tagId: tag.id, updates: { color } });
+    if (color === tag.color) return;
+    const result = tagColorSchema.safeParse(color);
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return;
     }
+    update.mutate({ tagId: tag.id, updates: { color: result.data } });
   };
 
   return (
@@ -155,7 +159,12 @@ export function TagManager() {
       toast.error(result.error.issues[0].message);
       return;
     }
-    await create.mutateAsync({ name: result.data, color: newColor });
+    const colorResult = tagColorSchema.safeParse(newColor);
+    if (!colorResult.success) {
+      toast.error(colorResult.error.issues[0].message);
+      return;
+    }
+    await create.mutateAsync({ name: result.data, color: colorResult.data });
     setNewName("");
     setNewColor(PROJECT_COLORS[0]);
   };
