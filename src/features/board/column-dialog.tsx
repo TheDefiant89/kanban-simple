@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/shared/color-picker";
 import type { Column } from "@/types";
-import { columnNameSchema } from "./schemas";
+import { columnColorSchema, columnNameSchema } from "./schemas";
 
 const COLUMN_COLORS = [
   "#94a3b8",
@@ -59,8 +59,13 @@ export function ColumnDialog({
       setError(result.error.issues[0].message);
       return;
     }
+    const colorResult = columnColorSchema.safeParse(color);
+    if (!colorResult.success) {
+      setError(colorResult.error.issues[0].message);
+      return;
+    }
     try {
-      await onSubmit({ name: result.data, color });
+      await onSubmit({ name: result.data, color: colorResult.data });
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
