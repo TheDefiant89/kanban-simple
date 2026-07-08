@@ -167,7 +167,10 @@ the `tasks` row. A Postgres trigger (`spawn_recurring_task`, in
 task's `completed_at` transitions from `null` to a timestamp: it leaves the completed
 task untouched (so completion history is retained) and inserts a new task in the same
 column with `start_date`/`due_date` shifted forward, linked back to the original via
-`recurrence_parent_id`.
+`recurrence_parent_id`. The new occurrence carries over the task's tags and subtasks
+(subtasks reset to incomplete); only the `start_date`/`due_date` shift forward and
+`completed_at` is cleared. The tag/subtask copy was added in
+`supabase/migrations/20260708000000_recurring_task_copy_tags.sql`.
 
 This is intentionally implemented as a lightweight, synchronous SQL trigger rather than
 a scheduled job, so it works with zero infrastructure beyond the database. The `custom`
