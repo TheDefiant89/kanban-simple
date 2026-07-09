@@ -1,0 +1,50 @@
+name: Migration drift check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Compare local migrations against the live project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          output="$(supabase migration list --linked)"
+          echo "$output"
+
+          # Every committed migration must show a matching "Remote" version.
+          # A row with a populated Local column and an empty Remote column
+          # means that migration was merged to main but never applied to
+          # the live database (see #30).
+          if echo "$output" | awk -F'|' 'NR > 2 { local=$1; remote=$2; gsub(/^[ \t]+|[ \t]+$/, "", local); gsub(/^[ \t]+|[ \t]+$/, "", remote); if (local != "" && remote == "") { found=1 } } END { exit !found }'; then
+            echo "::error::One or more migrations in supabase/migrations/ have not been applied to the live project. Run 'supabase db push' (or apply them via the Supabase dashboard/MCP) before relying on their fix being live."
+            exit 1
+          fi
+
+          echo "No drift detected: every committed migration is applied to the live project."
