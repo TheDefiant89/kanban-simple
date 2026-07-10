@@ -155,7 +155,11 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       delete_own_account: {
-        Args: Record<PropertyKey, never>;
+        Args: { current_password: string };
+        Returns: undefined;
+      };
+      change_own_password: {
+        Args: { current_password: string; new_password: string };
         Returns: undefined;
       };
       reorder_tasks: {
