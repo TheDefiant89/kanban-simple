@@ -41,29 +41,27 @@ export async function sendPasswordReset(email: string) {
   if (error) throw error;
 }
 
+/**
+ * Used only by the recovery-link flow (ResetPassword.tsx), where a valid
+ * recovery session already proves email ownership and there is no current
+ * password to check.
+ */
 export async function updatePassword(newPassword: string) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
 
 /**
- * Re-proves the current session's owner actually knows the account password,
- * by performing a fresh sign-in with it. A stolen/hijacked session has no
- * way to pass this, so it gates the app's most destructive actions.
+ * Changes the current user's password. The current password is verified
+ * server-side by the change_own_password RPC, so a hijacked/stolen session
+ * alone isn't enough to change it, even via a direct API call.
  */
-export async function reauthenticateWithPassword(password: string): Promise<void> {
-  const { data, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const email = data.user?.email;
-  if (!email) throw new Error("Not authenticated");
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw new Error("Incorrect password");
-}
-
 export async function changePassword(currentPassword: string, newPassword: string) {
-  await reauthenticateWithPassword(currentPassword);
-  await updatePassword(newPassword);
+  const { error } = await supabase.rpc("change_own_password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+  if (error) throw new Error(/incorrect password/i.test(error.message) ? "Incorrect password" : error.message);
 }
 
 export async function getSession() {
