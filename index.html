@@ -17,14 +17,38 @@
       Baseline defense-in-depth CSP (see GitHub issue #6). GitHub Pages
       serves this as a static site with no custom response headers, so it's
       set via meta tag rather than a real Content-Security-Policy header.
-      The two inline bootstrap scripts below are allowlisted by hash rather
+      The three inline bootstrap scripts below are allowlisted by hash rather
       than 'unsafe-inline' so a future injected script still can't run.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-mHegTjg5uvXBjcTeXY6laNbE/oKRffp1bPWMXHqBaxA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' %VITE_SUPABASE_URL%; base-uri 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-+wH0wqIG6cwUOCMae8Mhp/SnG9GE2ZKcNz8V7i3IDWk=' 'sha256-mHegTjg5uvXBjcTeXY6laNbE/oKRffp1bPWMXHqBaxA=' 'sha256-mUi3sp1BCiNR/ncfHzlpnRF+ioHl0cp8SaIOBftZWS8='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' %VITE_SUPABASE_URL%; base-uri 'self'; object-src 'none'; frame-ancestors 'none'"
     />
     <title>Kanban. Simple.</title>
+    <!--
+      Clickjacking defense-in-depth (see GitHub issue #36). The
+      frame-ancestors directive above is a no-op when the CSP is delivered
+      via a meta tag (GitHub Pages can't send it as a real response header
+      either), so this hides the page until script confirms it isn't
+      framed, and otherwise tries to bust out of the frame.
+    -->
+    <style id="anti-clickjack-style">
+      html {
+        display: none !important;
+      }
+    </style>
+    <script>
+      (function () {
+        if (window.top === window.self) {
+          var style = document.getElementById("anti-clickjack-style");
+          if (style) style.parentNode.removeChild(style);
+        } else {
+          try {
+            window.top.location = window.self.location;
+          } catch (e) {}
+        }
+      })();
+    </script>
     <script>
       // GitHub Pages SPA routing: decode the path encoded by 404.html back
       // into a real URL before the app boots, so React Router sees the
