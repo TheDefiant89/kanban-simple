@@ -156,11 +156,11 @@ export type Database = {
     Functions: {
       delete_own_account: {
         Args: { current_password: string };
-        Returns: undefined;
+        Returns: "ok" | "incorrect_password" | "locked_out";
       };
       change_own_password: {
         Args: { current_password: string; new_password: string };
-        Returns: undefined;
+        Returns: "ok" | "incorrect_password" | "locked_out";
       };
       reorder_tasks: {
         Args: { updates: { id: string; position: number; column_id?: string }[] };

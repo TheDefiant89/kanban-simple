@@ -54,14 +54,22 @@ export async function updatePassword(newPassword: string) {
 /**
  * Changes the current user's password. The current password is verified
  * server-side by the change_own_password RPC, so a hijacked/stolen session
- * alone isn't enough to change it, even via a direct API call.
+ * alone isn't enough to change it, even via a direct API call. Repeated
+ * incorrect attempts are rate-limited server-side (see migration
+ * 20260711000000); the RPC reports that via its return value rather than
+ * a thrown error, since a raised exception would roll back its own attempt
+ * tracking write.
  */
 export async function changePassword(currentPassword: string, newPassword: string) {
-  const { error } = await supabase.rpc("change_own_password", {
+  const { data, error } = await supabase.rpc("change_own_password", {
     current_password: currentPassword,
     new_password: newPassword,
   });
   if (error) throw new Error(/incorrect password/i.test(error.message) ? "Incorrect password" : error.message);
+  if (data === "incorrect_password") throw new Error("Incorrect password");
+  if (data === "locked_out") {
+    throw new Error("Too many incorrect password attempts. Try again in a few minutes.");
+  }
 }
 
 export async function getSession() {
