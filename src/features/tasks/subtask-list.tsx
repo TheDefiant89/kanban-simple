@@ -11,6 +11,8 @@ export interface SubtaskItem {
   is_completed: boolean;
 }
 
+const SUBTASK_TITLE_MAX_LENGTH = 200;
+
 interface SubtaskListProps {
   subtasks: SubtaskItem[];
   onAdd: (title: string) => void;
@@ -23,7 +25,7 @@ export function SubtaskList({ subtasks, onAdd, onToggle, onDelete }: SubtaskList
   const completed = subtasks.filter((s) => s.is_completed).length;
 
   const handleAdd = () => {
-    const trimmed = newTitle.trim();
+    const trimmed = newTitle.trim().slice(0, SUBTASK_TITLE_MAX_LENGTH);
     if (!trimmed) return;
     onAdd(trimmed);
     setNewTitle("");
@@ -86,6 +88,7 @@ export function SubtaskList({ subtasks, onAdd, onToggle, onDelete }: SubtaskList
         <Input
           placeholder="Add a subtask…"
           value={newTitle}
+          maxLength={SUBTASK_TITLE_MAX_LENGTH}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
