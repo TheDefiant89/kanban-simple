@@ -58,7 +58,9 @@ export async function updatePassword(newPassword: string) {
  * incorrect attempts are rate-limited server-side (see migration
  * 20260711000000); the RPC reports that via its return value rather than
  * a thrown error, since a raised exception would roll back its own attempt
- * tracking write.
+ * tracking write. On success the RPC also revokes every other session for
+ * the account (see migration 20260714000000), so a stolen session doesn't
+ * survive this call.
  */
 export async function changePassword(currentPassword: string, newPassword: string) {
   const { data, error } = await supabase.rpc("change_own_password", {
