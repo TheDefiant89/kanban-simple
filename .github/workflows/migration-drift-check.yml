@@ -48,7 +48,15 @@ jobs:
           # (see #55). Compare by migration NAME instead, which the table
           # view doesn't expose but the underlying schema_migrations table
           # does, so a version remap alone doesn't register as drift.
-          remote_names="$(psql "postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres" -Atc "select name from supabase_migrations.schema_migrations order by version")"
+          #
+          # `db.<ref>.supabase.co:5432` is IPv6-only on this project's tier,
+          # and GitHub-hosted runners have no IPv6 egress, so a direct psql
+          # connection there fails with "Network is unreachable" before the
+          # comparison ever runs. Use the Supavisor shared pooler in session
+          # mode instead -- IPv4 on every project tier. The region segment
+          # (aws-0-eu-west-1) matches this project and isn't derived from a
+          # secret; update it if the project ever moves region.
+          remote_names="$(psql "postgresql://postgres.${SUPABASE_PROJECT_REF}:${SUPABASE_DB_PASSWORD}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres" -Atc "select name from supabase_migrations.schema_migrations order by version")"
 
           missing=0
           for file in supabase/migrations/*.sql; do
