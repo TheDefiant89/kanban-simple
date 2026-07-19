@@ -32,19 +32,37 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           set -euo pipefail
 
-          output="$(supabase migration list --linked)"
-          echo "$output"
+          echo "$(supabase migration list --linked)"
 
-          # Every committed migration must show a matching "Remote" version.
-          # A row with a populated Local column and an empty Remote column
-          # means that migration was merged to main but never applied to
-          # the live database (see #30).
-          if echo "$output" | awk -F'|' 'NR > 2 { local=$1; remote=$2; gsub(/[` \t]/, "", local); gsub(/[` \t]/, "", remote); if (local != "" && remote == "") { found=1 } } END { exit !found }'; then
-            echo "::error::One or more migrations in supabase/migrations/ have not been applied to the live project. Run 'supabase db push' (or apply them via the Supabase dashboard/MCP) before relying on their fix being live."
+          # `supabase migration list --linked` pairs Local/Remote by table
+          # row, not by migration identity. When the CLI records a migration
+          # under a different version than its local filename (e.g. the
+          # actual push-time timestamp instead of the locally-authored one),
+          # the local and remote rows for the SAME migration land on
+          # different rows entirely, so neither is ever seen as "matched" --
+          # producing a false positive for every migration pushed that way
+          # (see #55). Compare by migration NAME instead, which the table
+          # view doesn't expose but the underlying schema_migrations table
+          # does, so a version remap alone doesn't register as drift.
+          remote_names="$(psql "postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres" -Atc "select name from supabase_migrations.schema_migrations order by version")"
+
+          missing=0
+          for file in supabase/migrations/*.sql; do
+            base="$(basename "$file" .sql)"
+            name="${base#*_}"
+            if ! grep -qxF "$name" <<< "$remote_names"; then
+              echo "::error::Migration '$file' (name: $name) has not been applied to the live project."
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -eq 1 ]; then
+            echo "::error::One or more migrations in supabase/migrations/ have not been applied to the live project (by name). Run 'supabase db push' (or apply them via the Supabase dashboard/MCP) before relying on their fix being live."
             exit 1
           fi
 
-          echo "No drift detected: every committed migration is applied to the live project."
+          echo "No drift detected: every committed migration is applied to the live project (matched by name)."
