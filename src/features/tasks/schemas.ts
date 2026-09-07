@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidCronExpression } from "@/lib/cron";
 
 export const taskFormSchema = z
   .object({
@@ -19,6 +20,16 @@ export const taskFormSchema = z
   .refine((data) => data.recurrenceType !== "custom" || !!data.recurrenceCron?.trim(), {
     message: "Enter a cron expression for custom recurrence",
     path: ["recurrenceCron"],
-  });
+  })
+  .refine(
+    (data) =>
+      data.recurrenceType !== "custom" ||
+      !data.recurrenceCron?.trim() ||
+      isValidCronExpression(data.recurrenceCron),
+    {
+      message: "Enter a valid 5-field cron expression, e.g. 0 0 1 */3 *",
+      path: ["recurrenceCron"],
+    }
+  );
 
 export type TaskFormInput = z.infer<typeof taskFormSchema>;

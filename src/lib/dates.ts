@@ -11,8 +11,21 @@ const MONTH_DAY_YEAR = new Intl.DateTimeFormat("en-US", {
 
 export type DateFormat = "MMM d, yyyy" | "MMM d" | "yyyy-MM-dd";
 
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 export function parseDate(value: string | null): Date | null {
   if (!value) return null;
+  // Date-only values (the `date` columns start_date / due_date) must be read
+  // as a local calendar day. `new Date("2026-09-08")` parses as UTC midnight,
+  // which falls on the previous day in any negative-UTC-offset timezone —
+  // shifting displayed due dates, the overdue flag and every date filter back
+  // by a day. Full timestamps (completed_at / created_at / updated_at) keep
+  // their timezone-aware parse so they render at the correct local instant.
+  const dateOnly = DATE_ONLY.exec(value);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }

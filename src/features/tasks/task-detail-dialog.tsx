@@ -358,9 +358,14 @@ export function TaskDetailDialog({
                 <Label htmlFor="recurrence-cron">Cron expression</Label>
                 <Input
                   id="recurrence-cron"
-                  placeholder="0 9 * * 1"
+                  placeholder="0 0 1 */3 *"
                   {...register("recurrenceCron")}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Standard 5-field cron (min hour day-of-month month day-of-week). The next
+                  occurrence lands on the next matching date; the minute and hour are ignored.
+                  Example: <code>0 0 1 */3 *</code> = the 1st of every 3rd month.
+                </p>
                 {errors.recurrenceCron && (
                   <p className="text-xs text-destructive">{errors.recurrenceCron.message}</p>
                 )}
