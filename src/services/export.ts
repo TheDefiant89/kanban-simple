@@ -13,7 +13,9 @@ function toCsv(rows: object[], columns: string[]): string {
     // tab/CR before checking, per OWASP's CSV injection guidance), so prefix
     // it with a single quote to force the cell to be read as plain text.
     const guarded = /^[\t\r]*[=+\-@]/.test(str) ? `'${str}` : str;
-    return /[",\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
+    // Quote on any comma, quote, or line break — including a lone CR, which is
+    // a record separator to many CSV parsers.
+    return /[",\n\r]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
   };
   const header = columns.join(",");
   const body = rows.map((row) =>

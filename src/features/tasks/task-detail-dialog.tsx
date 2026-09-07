@@ -133,7 +133,10 @@ export function TaskDetailDialog({
         priority: task.priority,
         startDate: toDateInputValue(task.start_date),
         dueDate: toDateInputValue(task.due_date),
-        completedDate: toDateInputValue(task.completed_at),
+        // completed_at is a full timestamp; read it as a local calendar day so
+        // it round-trips with the local-midnight value written on save
+        // (below) instead of drifting a day via the raw UTC string.
+        completedDate: formatDate(task.completed_at, "yyyy-MM-dd"),
         recurrenceType: task.recurrence_type,
         recurrenceCron: task.recurrence_cron ?? "",
       });

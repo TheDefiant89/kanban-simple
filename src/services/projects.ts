@@ -1,5 +1,5 @@
 import { supabase } from "@/supabase/client";
-import type { Project } from "@/types";
+import type { Project, Task } from "@/types";
 import { DEFAULT_COLUMNS } from "@/types";
 import { slugify } from "@/lib/utils";
 
@@ -193,32 +193,96 @@ export async function duplicateProject(project: Project): Promise<Project> {
       .select();
     if (insertColumnsError) throw insertColumnsError;
 
-    const columnIdMap = new Map(columns.map((old, i) => [old.id, insertedColumns[i].id]));
+    // Correlate old -> new columns by position rather than array index:
+    // PostgREST does not guarantee that the inserted rows come back in the
+    // same order as the input, and positions are distinct within a project.
+    const insertedColumnByPosition = new Map(insertedColumns.map((c) => [c.position, c.id]));
+    const columnIdMap = new Map<string, string>();
+    for (const old of columns) {
+      const newId = insertedColumnByPosition.get(old.position);
+      if (newId) columnIdMap.set(old.id, newId);
+    }
+    const fallbackColumnId = insertedColumns[0].id;
 
+    // Pull the source tasks together with their subtasks and tags so the
+    // duplicate carries them too (matching duplicateTask), instead of copying
+    // only the bare task rows.
     const { data: tasks, error: tasksError } = await supabase
       .from("tasks")
-      .select("*")
+      .select("*, subtasks(*), task_tags(tag_id)")
       .eq("project_id", project.id)
       .eq("is_archived", false);
     if (tasksError) throw tasksError;
 
-    if (tasks && tasks.length > 0) {
-      const { error: insertTasksError } = await supabase.from("tasks").insert(
-        tasks.map((t) => ({
-          project_id: newProject.id,
-          column_id: columnIdMap.get(t.column_id) ?? Array.from(columnIdMap.values())[0],
-          user_id: userId,
-          title: t.title,
-          description: t.description,
-          position: t.position,
-          priority: t.priority,
-          start_date: t.start_date,
-          due_date: t.due_date,
-          recurrence_type: t.recurrence_type,
-          recurrence_cron: t.recurrence_cron,
-        }))
-      );
+    type SourceTask = Task & {
+      subtasks: { title: string; is_completed: boolean; position: number }[];
+      task_tags: { tag_id: string }[];
+    };
+    const sourceTasks = (tasks ?? []) as unknown as SourceTask[];
+
+    if (sourceTasks.length > 0) {
+      const { data: insertedTasks, error: insertTasksError } = await supabase
+        .from("tasks")
+        .insert(
+          sourceTasks.map((t) => ({
+            project_id: newProject.id,
+            column_id: columnIdMap.get(t.column_id) ?? fallbackColumnId,
+            user_id: userId,
+            title: t.title,
+            description: t.description,
+            position: t.position,
+            priority: t.priority,
+            start_date: t.start_date,
+            due_date: t.due_date,
+            recurrence_type: t.recurrence_type,
+            recurrence_cron: t.recurrence_cron,
+          }))
+        )
+        .select();
       if (insertTasksError) throw insertTasksError;
+
+      // Correlate old -> new tasks by (new column_id, position), which is
+      // unique within the board, so subtasks/tags land on the right copies
+      // regardless of the order PostgREST returns the inserted rows in.
+      const insertedTaskByKey = new Map(
+        insertedTasks.map((t) => [`${t.column_id}:${t.position}`, t.id])
+      );
+      const oldToNewTaskId = new Map<string, string>();
+      for (const t of sourceTasks) {
+        const newColumnId = columnIdMap.get(t.column_id) ?? fallbackColumnId;
+        const newTaskId = insertedTaskByKey.get(`${newColumnId}:${t.position}`);
+        if (newTaskId) oldToNewTaskId.set(t.id, newTaskId);
+      }
+
+      const subtaskRows = sourceTasks.flatMap((t) => {
+        const newTaskId = oldToNewTaskId.get(t.id);
+        if (!newTaskId) return [];
+        return t.subtasks.map((s) => ({
+          task_id: newTaskId,
+          user_id: userId,
+          title: s.title,
+          is_completed: s.is_completed,
+          position: s.position,
+        }));
+      });
+      if (subtaskRows.length > 0) {
+        const { error: insertSubtasksError } = await supabase.from("subtasks").insert(subtaskRows);
+        if (insertSubtasksError) throw insertSubtasksError;
+      }
+
+      const tagRows = sourceTasks.flatMap((t) => {
+        const newTaskId = oldToNewTaskId.get(t.id);
+        if (!newTaskId) return [];
+        return t.task_tags.map((tt) => ({
+          task_id: newTaskId,
+          tag_id: tt.tag_id,
+          user_id: userId,
+        }));
+      });
+      if (tagRows.length > 0) {
+        const { error: insertTagsError } = await supabase.from("task_tags").insert(tagRows);
+        if (insertTagsError) throw insertTagsError;
+      }
     }
   }
 
