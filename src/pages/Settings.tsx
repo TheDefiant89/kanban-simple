@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Download, KeyRound, Loader2, LogOut, ShieldAlert, Tag as TagIcon } from "lucide-react";
+import { Archive, Download, KeyRound, Loader2, LogOut, ShieldAlert, Tag as TagIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import { exportUserDataAsCsv } from "@/services/export";
 import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/schemas";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { TagManager } from "@/features/settings/tag-manager";
+import { AutoArchiveSetting } from "@/features/settings/auto-archive-setting";
 
 export default function Settings() {
   useDocumentTitle("Settings");
@@ -185,6 +186,21 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <TagManager />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Archive className="h-4 w-4" /> Auto-archive
+          </CardTitle>
+          <CardDescription>
+            Completed tasks are archived automatically once they've been done this long. Archived
+            tasks stay available from the Archived button on each board.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AutoArchiveSetting />
         </CardContent>
       </Card>
 

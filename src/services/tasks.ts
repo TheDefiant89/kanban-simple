@@ -36,6 +36,46 @@ export async function listTasks(
   return (rows as unknown as RawTask[]).map(hydrate);
 }
 
+export interface ArchivedTask {
+  id: string;
+  title: string;
+  column_id: string;
+  priority: Priority;
+  completed_at: string | null;
+  updated_at: string;
+}
+
+export const ARCHIVED_PAGE_SIZE = 50;
+
+/**
+ * One page of a project's archived tasks, most recently archived (updated)
+ * first. Archived tasks are never part of the board's main query; this is
+ * only called when the Archived panel is opened.
+ */
+export async function listArchivedTasks(
+  projectId: string,
+  page: number,
+  search = ""
+): Promise<{ tasks: ArchivedTask[]; hasMore: boolean }> {
+  const from = page * ARCHIVED_PAGE_SIZE;
+  let query = supabase
+    .from("tasks")
+    .select("id, title, column_id, priority, completed_at, updated_at")
+    .eq("project_id", projectId)
+    .eq("is_archived", true);
+  const term = search.trim();
+  // Escape LIKE wildcards so a search for "50%" matches literally.
+  if (term) query = query.ilike("title", `%${term.replace(/[\\%_]/g, "\\$&")}%`);
+  // Fetch one extra row to know whether another page exists.
+  const { data, error } = await query
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: true })
+    .range(from, from + ARCHIVED_PAGE_SIZE);
+  if (error) throw error;
+  const rows = (data ?? []) as ArchivedTask[];
+  return { tasks: rows.slice(0, ARCHIVED_PAGE_SIZE), hasMore: rows.length > ARCHIVED_PAGE_SIZE };
+}
+
 export async function createTask(input: {
   projectId: string;
   columnId: string;

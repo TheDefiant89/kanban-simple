@@ -10,6 +10,8 @@ export type Profile = {
   email: string;
   display_name: string | null;
   avatar_url: string | null;
+  /** Days after completion before tasks are auto-archived; null = off. */
+  auto_archive_days: number | null;
   created_at: string;
   updated_at: string;
 };
