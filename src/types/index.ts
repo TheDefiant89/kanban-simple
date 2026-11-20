@@ -11,6 +11,7 @@ export type {
   Tag,
   TaskTag,
   ActivityLogEntry,
+  ColumnSort,
 } from "./database";
 
 /** A task hydrated with its subtasks and tags for UI consumption. */

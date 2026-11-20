@@ -4,6 +4,7 @@
 
 export type Priority = "low" | "medium" | "high" | "critical";
 export type RecurrenceType = "none" | "daily" | "weekly" | "monthly" | "custom";
+export type ColumnSort = "custom" | "priority" | "due_date" | "name" | "tag";
 
 export type Profile = {
   id: string;
@@ -36,6 +37,8 @@ export type Column = {
   color: string;
   position: number;
   is_collapsed: boolean;
+  /** Display order of the column's tasks; "custom" is drag-and-drop order. */
+  sort_by: ColumnSort;
   created_at: string;
   updated_at: string;
 };

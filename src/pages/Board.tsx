@@ -53,8 +53,10 @@ import {
 import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { buildTaskPredicate } from "@/lib/task-filters";
+import { sortTasks } from "@/lib/sort-tasks";
+import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
+import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 const noop = () => {};
 
@@ -106,7 +108,7 @@ export default function Board() {
     const cache = displayCache.current;
     const nextCache = new Map<string, { source: ColumnWithTasks; result: ColumnWithTasks }>();
     const next = columns.map((column) => {
-      const tasks = column.tasks.filter(matches);
+      const tasks = sortTasks(column.tasks.filter(matches), column.sort_by);
       const hit = cache.get(column.id);
       const reusable =
         hit &&
@@ -271,29 +273,56 @@ export default function Board() {
       const tasksInCol = items[colIdx].tasks;
       const fromIndex = tasksInCol.findIndex((t) => t.id === activeId);
       const toIndex = tasksInCol.findIndex((t) => t.id === overId);
-      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      const movedWithinColumn = fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex;
+      if (movedWithinColumn) {
         next = [...items];
         next[colIdx] = { ...items[colIdx], tasks: arrayMove(tasksInCol, fromIndex, toIndex) };
       }
       setItems(next);
 
+      const destColumnId = next[colIdx].id;
+      const changedColumn = !!movedFromColumnId && movedFromColumnId !== destColumnId;
+      if (!movedWithinColumn && !changedColumn) {
+        // Dropped back where it started: nothing to save (in a sorted column
+        // this must not freeze the sorted order into a custom one).
+        resyncIfStale();
+        return;
+      }
+
       // Persist positions against the FULL task lists: the mirror only
       // holds tasks matching the active filters, and indexing filtered
       // lists would collide with hidden tasks' positions.
-      const affectedIds = new Set(
-        [next[colIdx].id, movedFromColumnId].filter(Boolean) as string[]
-      );
       const tasksById = new Map(columns.flatMap((c) => c.tasks).map((t) => [t.id, t]));
       const updates: TaskPositionUpdate[] = [];
-      for (const columnId of affectedIds) {
-        const full = columns.find((c) => c.id === columnId);
-        const visible = next.find((c) => c.id === columnId);
-        if (!full || !visible) continue;
-        const merged = mergeVisibleOrder(full.tasks, visible.tasks, activeId);
-        updates.push(...buildPositionUpdates(merged, columnId, tasksById));
+      const destFull = columns.find((c) => c.id === destColumnId);
+      const destSorted = !!destFull && destFull.sort_by !== "custom";
+      if (destFull) {
+        // A sorted column's visible order is the sorted one, so merge the
+        // drop into the column's full list in that same order. The result
+        // becomes its custom order and the column switches to "custom"
+        // below, so what the user sees is exactly what gets saved.
+        const merged = mergeVisibleOrder(
+          sortTasks(destFull.tasks, destFull.sort_by),
+          next[colIdx].tasks,
+          activeId
+        );
+        updates.push(...buildPositionUpdates(merged, destColumnId, tasksById));
+      }
+      if (changedColumn) {
+        // The source column only lost a task; keep its own custom order
+        // (even if it is displayed sorted) and just close the gap.
+        const sourceFull = columns.find((c) => c.id === movedFromColumnId);
+        if (sourceFull) {
+          const remaining = sortTasks(sourceFull.tasks, "custom").filter((t) => t.id !== activeId);
+          updates.push(...buildPositionUpdates(remaining, sourceFull.id, tasksById));
+        }
       }
       if (updates.length > 0) taskMutations.reorder.mutate(updates);
       else resyncIfStale();
+      if (destSorted) {
+        columnMutations.update.mutate({ columnId: destColumnId, updates: { sort_by: "custom" } });
+        toast.info(`"${destFull.name}" switched to custom order`);
+      }
     }
   };
 
@@ -322,6 +351,11 @@ export default function Board() {
   const handleDeleteColumn = useCallback((column: Column) => setDeletingColumn(column), []);
 
   const updateColumnMutate = columnMutations.update.mutate;
+  const handleChangeSort = useCallback(
+    (column: Column, sortBy: ColumnSort) =>
+      updateColumnMutate({ columnId: column.id, updates: { sort_by: sortBy } }),
+    [updateColumnMutate]
+  );
   const handleToggleCollapse = useCallback(
     (column: Column) =>
       updateColumnMutate({
@@ -409,6 +443,7 @@ export default function Board() {
                 onRename={handleRenameColumn}
                 onDelete={handleDeleteColumn}
                 onToggleCollapse={handleToggleCollapse}
+                onChangeSort={handleChangeSort}
               />
             ))}
           </SortableContext>

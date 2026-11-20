@@ -3,17 +3,21 @@ import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, ChevronRight, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronRight, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { COLUMN_SORTS, COLUMN_SORT_LABELS } from "@/lib/sort-tasks";
 import { TaskCard } from "@/features/board/task-card";
 import { cn } from "@/lib/utils";
-import type { Column, ColumnWithTasks, TaskWithRelations } from "@/types";
+import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 export const dropzoneId = (columnId: string) => `dropzone::${columnId}`;
 
@@ -25,6 +29,7 @@ interface ColumnComponentProps {
   onRename: (column: Column) => void;
   onDelete: (column: Column) => void;
   onToggleCollapse: (column: Column) => void;
+  onChangeSort: (column: Column, sortBy: ColumnSort) => void;
 }
 
 // Memoised: with stable callbacks from Board and identity-preserving
@@ -37,6 +42,7 @@ export const ColumnComponent = memo(function ColumnComponent({
   onRename,
   onDelete,
   onToggleCollapse,
+  onChangeSort,
 }: ColumnComponentProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
@@ -120,6 +126,33 @@ export const ColumnComponent = memo(function ColumnComponent({
         <span className="rounded-full border bg-panel-2 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
           {column.tasks.length}
         </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", column.sort_by !== "custom" && "text-primary")}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Sort tasks (${COLUMN_SORT_LABELS[column.sort_by]})`}
+              title={`Sorted by: ${COLUMN_SORT_LABELS[column.sort_by]}`}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Sort tasks by</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={column.sort_by}
+              onValueChange={(value) => onChangeSort(column, value as ColumnSort)}
+            >
+              {COLUMN_SORTS.map((sort) => (
+                <DropdownMenuRadioItem key={sort} value={sort}>
+                  {COLUMN_SORT_LABELS[sort]}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost"
           size="icon"
