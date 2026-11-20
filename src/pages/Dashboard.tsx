@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { LayoutGrid, Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -173,10 +174,24 @@ export default function Dashboard() {
               onRename={() => openRenameDialog(project)}
               onDuplicate={() => duplicateProject.mutate(project)}
               onArchiveToggle={() =>
-                updateProject.mutate({
-                  projectId: project.id,
-                  updates: { is_archived: !project.is_archived },
-                })
+                updateProject.mutate(
+                  {
+                    projectId: project.id,
+                    updates: { is_archived: !project.is_archived },
+                  },
+                  {
+                    onSuccess: (updated) => {
+                      if (!project.is_archived) toast.success("Project archived");
+                      else if (updated.name !== project.name)
+                        // Another active project took the name while this one
+                        // was archived, so updateProject picked a free one.
+                        toast.success(`Restored as "${updated.name}"`, {
+                          description: `"${project.name}" is already used by another project.`,
+                        });
+                      else toast.success("Project restored");
+                    },
+                  }
+                )
               }
               onDelete={() => setDeletingProject(project)}
             />
