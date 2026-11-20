@@ -102,7 +102,7 @@ export const ColumnComponent = memo(function ColumnComponent({
       className={cn(
         // Near full-width on phones so one column fills the screen with a
         // sliver of the next showing; fixed width from sm up.
-        "relative flex h-full w-[calc(100vw-2.5rem)] shrink-0 snap-start flex-col overflow-hidden rounded-xl border bg-panel sm:w-72",
+        "relative flex h-full w-[calc(100vw-2.5rem)] shrink-0 snap-start flex-col overflow-hidden rounded-xl border bg-panel sm:w-72 short:w-72",
         isDragging && "opacity-50"
       )}
     >
@@ -116,7 +116,7 @@ export const ColumnComponent = memo(function ColumnComponent({
       <div
         {...attributes}
         {...listeners}
-        className="flex shrink-0 cursor-grab select-none items-center gap-2 border-b px-3 pb-2.5 pt-3 active:cursor-grabbing [-webkit-touch-callout:none]"
+        className="flex shrink-0 cursor-grab select-none items-center gap-2 border-b px-3 pb-2.5 pt-3 active:cursor-grabbing short:pb-1.5 short:pt-2 [-webkit-touch-callout:none]"
       >
         <span
           className="neon-sm h-2.5 w-2.5 shrink-0 rounded-full"

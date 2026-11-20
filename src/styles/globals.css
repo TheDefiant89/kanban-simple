@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Short viewports, in practice a phone held sideways: the board's chrome
+   is compacted so the columns keep most of the height. */
+@custom-variant short (@media (max-height: 500px));
 
 /* ---------------------------------------------------------------------------
    Fonts — self-hosted (variable) so they work offline and under the app's

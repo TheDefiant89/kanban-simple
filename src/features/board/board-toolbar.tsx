@@ -59,8 +59,8 @@ export function BoardToolbar({
   onOpenArchived,
 }: BoardToolbarProps) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background/60 px-3 py-2 sm:px-4 sm:py-2.5">
-      <div className="relative w-full sm:max-w-xs">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background/60 px-3 py-2 sm:px-4 sm:py-2.5 short:min-w-0 short:flex-1 short:flex-nowrap short:border-b-0 short:py-1.5 short:pl-1 sm:short:py-1.5 sm:short:pl-1">
+      <div className="relative w-full sm:max-w-xs short:w-36 short:shrink-0">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search tasks…"
@@ -74,9 +74,9 @@ export function BoardToolbar({
       {/* Phones: the filters share one horizontally swipeable row instead of
           wrapping onto three. From sm up the wrapper dissolves (`contents`)
           and the controls flow in the parent row as before. */}
-      <div className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:contents [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:not-short:contents short:mx-0 short:w-auto short:min-w-0 short:flex-1 short:px-0 [&::-webkit-scrollbar]:hidden">
         <Select value={filters.due} onValueChange={(v) => onDueChange(v as DueDateFilter)}>
-          <SelectTrigger className="w-32 shrink-0 sm:w-40">
+          <SelectTrigger className="w-32 shrink-0 sm:w-40 short:w-28">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -97,7 +97,7 @@ export function BoardToolbar({
           aria-pressed={filters.showCompleted}
           onClick={() => onShowCompletedChange(!filters.showCompleted)}
           className={cn(
-            "shrink-0 sm:hidden",
+            "shrink-0 sm:not-short:hidden",
             filters.showCompleted && "border-primary bg-primary/10 text-primary hover:text-primary"
           )}
         >
@@ -166,14 +166,14 @@ export function BoardToolbar({
 
         <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
           <Switch
-            className="max-sm:hidden"
+            className="max-sm:hidden short:hidden"
             id="show-completed"
             checked={filters.showCompleted}
             onCheckedChange={onShowCompletedChange}
           />
           <Label
             htmlFor="show-completed"
-            className="whitespace-nowrap text-sm font-normal max-sm:hidden"
+            className="whitespace-nowrap text-sm font-normal max-sm:hidden short:hidden"
           >
             Show completed
           </Label>

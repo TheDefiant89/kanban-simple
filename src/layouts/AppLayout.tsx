@@ -42,7 +42,7 @@ export function AppLayout() {
     <div className="relative flex h-dvh flex-col overflow-hidden bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <NeonBackdrop />
       <header
-        className="sticky top-0 z-40 flex h-[calc(58px+env(safe-area-inset-top))] items-center gap-3 border-b px-4 pt-[env(safe-area-inset-top)] backdrop-blur-[14px]"
+        className="sticky top-0 z-40 flex h-[calc(58px+env(safe-area-inset-top))] short:h-[calc(44px+env(safe-area-inset-top))] items-center gap-3 border-b px-4 pt-[env(safe-area-inset-top)] backdrop-blur-[14px]"
         style={{ background: "var(--hdr)" }}
       >
         <Link to="/dashboard" className="flex items-center gap-2.5">

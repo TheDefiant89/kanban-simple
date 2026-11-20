@@ -399,29 +399,35 @@ export default function Board() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/dashboard" aria-label="Back to dashboard">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <span
-          className="neon-sm h-3 w-3 rounded-full"
-          style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
-        />
-        <h1 className="font-display truncate text-lg font-semibold">{project.name}</h1>
-      </div>
+      {/* Title and toolbar stack normally; on short screens they share one
+          row so the board gets the height. */}
+      <div className="flex shrink-0 flex-col short:flex-row short:items-center short:border-b">
+        <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 sm:gap-3 sm:px-4 sm:py-3 short:border-b-0 short:py-1 short:pr-1 sm:short:gap-2 sm:short:px-2 sm:short:py-1">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/dashboard" aria-label="Back to dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <span
+            className="neon-sm h-3 w-3 rounded-full"
+            style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
+          />
+          <h1 className="font-display truncate text-lg font-semibold short:max-w-40 short:text-base">
+            {project.name}
+          </h1>
+        </div>
 
-      <BoardToolbar
-        filters={filters}
-        tags={tags}
-        onSearchChange={(v) => setSearch(projectId, v)}
-        onDueChange={(v) => setDue(projectId, v)}
-        onTogglePriority={(p) => togglePriority(projectId, p)}
-        onToggleTag={(id) => toggleTag(projectId, id)}
-        onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
-        onOpenArchived={() => setArchivedOpen(true)}
-      />
+        <BoardToolbar
+          filters={filters}
+          tags={tags}
+          onSearchChange={(v) => setSearch(projectId, v)}
+          onDueChange={(v) => setDue(projectId, v)}
+          onTogglePriority={(p) => togglePriority(projectId, p)}
+          onToggleTag={(id) => toggleTag(projectId, id)}
+          onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
+          onOpenArchived={() => setArchivedOpen(true)}
+        />
+      </div>
 
       <ArchivedTasksDialog
         open={archivedOpen}
@@ -442,7 +448,7 @@ export default function Board() {
             turned off mid-drag so it doesn't fight dnd-kit's auto-scroll. */}
         <div
           className={cn(
-            "flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain p-3 scrollbar-thin sm:p-4",
+            "flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain p-3 scrollbar-thin sm:p-4 short:py-2",
             !activeTask && !activeColumn && "max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-3"
           )}
         >
@@ -464,7 +470,7 @@ export default function Board() {
 
           <Button
             variant="outline"
-            className="h-11 w-[calc(100vw-2.5rem)] shrink-0 snap-start justify-start border-dashed text-muted-foreground sm:w-72"
+            className="h-11 w-[calc(100vw-2.5rem)] shrink-0 snap-start short:w-72 justify-start border-dashed text-muted-foreground sm:w-72"
             onClick={() => {
               setEditingColumn(null);
               setColumnDialogOpen(true);
