@@ -248,7 +248,10 @@ export function TaskDetailDialog({
           columnId: values.columnId,
           title: values.title,
           description: values.description,
-          position: targetColumn?.tasks.length ?? 0,
+          // After the last task rather than at `tasks.length`: positions can
+          // repeat or have gaps (e.g. recurring copies), so a count can land
+          // in the middle of the column.
+          position: (targetColumn?.tasks ?? []).reduce((max, t) => Math.max(max, t.position + 1), 0),
           priority: values.priority,
           startDate: values.startDate || null,
           dueDate: values.dueDate || null,

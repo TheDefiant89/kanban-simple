@@ -1,4 +1,5 @@
 import { supabase } from "@/supabase/client";
+import { fetchAllPages } from "@/lib/fetch-all";
 import type { Priority, RecurrenceType, Tag, Task, TaskWithRelations } from "@/types";
 
 type RawTask = Task & {
@@ -21,11 +22,18 @@ export async function listTasks(
   projectId: string,
   includeArchived = false
 ): Promise<TaskWithRelations[]> {
-  let query = supabase.from("tasks").select(TASK_SELECT).eq("project_id", projectId);
-  if (!includeArchived) query = query.eq("is_archived", false);
-  const { data, error } = await query.order("position", { ascending: true });
-  if (error) throw error;
-  return (data as unknown as RawTask[]).map(hydrate);
+  // Paged: a board can hold more tasks than PostgREST returns in one
+  // response, and the overflow was silently dropped. `position` repeats
+  // across columns, so `id` breaks ties to keep pages stable.
+  const rows = await fetchAllPages((from, to) => {
+    let query = supabase.from("tasks").select(TASK_SELECT).eq("project_id", projectId);
+    if (!includeArchived) query = query.eq("is_archived", false);
+    return query
+      .order("position", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
+  });
+  return (rows as unknown as RawTask[]).map(hydrate);
 }
 
 export async function createTask(input: {
@@ -185,12 +193,16 @@ export interface TaskStat {
 
 /** Lightweight rows used to compute dashboard tile stats across all of a user's projects. */
 export async function listTaskStatsForUser(): Promise<TaskStat[]> {
-  const { data, error } = await supabase
-    .from("tasks")
-    .select("project_id, due_date, completed_at")
-    .eq("is_archived", false);
-  if (error) throw error;
-  return data ?? [];
+  // Paged for the same reason as listTasks: users can have well over one
+  // response's worth of tasks across their projects.
+  return fetchAllPages((from, to) =>
+    supabase
+      .from("tasks")
+      .select("project_id, due_date, completed_at")
+      .eq("is_archived", false)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function setTaskTags(taskId: string, tagIds: string[]): Promise<void> {
