@@ -170,6 +170,20 @@ export type Database = {
         Args: { updates: { id: string; position: number }[] };
         Returns: undefined;
       };
+      create_project_with_columns: {
+        Args: {
+          p_name: string;
+          p_slug: string;
+          p_description: string | null;
+          p_color: string;
+          p_columns: { name: string; color: string }[];
+        };
+        Returns: Database["public"]["Tables"]["projects"]["Row"];
+      };
+      duplicate_project: {
+        Args: { p_source_id: string; p_name: string; p_slug: string };
+        Returns: Database["public"]["Tables"]["projects"]["Row"];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -1,5 +1,5 @@
 import { supabase } from "@/supabase/client";
-import type { Project, Task } from "@/types";
+import type { Project } from "@/types";
 import { DEFAULT_COLUMNS } from "@/types";
 import { slugify } from "@/lib/utils";
 
@@ -60,44 +60,70 @@ export async function getProjectBySlug(slug: string): Promise<Project> {
   return data;
 }
 
+const PROJECT_NAME_MAX = 80;
+
+/**
+ * Finds a name that doesn't collide (case-insensitively) with one of the
+ * user's other active projects — the unique (user_id, lower(name)) index only
+ * covers non-archived projects — appending " 2", " 3", ... on collision. The
+ * base is trimmed so the result stays within the 80-character DB cap.
+ */
+async function uniqueNameFor(
+  base: string,
+  userId: string,
+  excludeProjectId?: string
+): Promise<string> {
+  // The ILIKE may over-match if the name contains % or _, which only adds
+  // rows to the taken-set; the exact comparison below stays correct.
+  let query = supabase
+    .from("projects")
+    .select("name")
+    .eq("user_id", userId)
+    .eq("is_archived", false)
+    .ilike("name", `${base.slice(0, PROJECT_NAME_MAX - 4)}%`);
+  if (excludeProjectId) query = query.neq("id", excludeProjectId);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const taken = new Set((data ?? []).map((row) => row.name.toLowerCase()));
+  const fit = (suffix: string) => `${base.slice(0, PROJECT_NAME_MAX - suffix.length).trimEnd()}${suffix}`;
+  let name = fit("");
+  let attempt = 1;
+  while (taken.has(name.toLowerCase())) {
+    attempt += 1;
+    name = fit(` ${attempt}`);
+  }
+  return name;
+}
+
+async function currentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  const userId = data.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+  return userId;
+}
+
 export async function createProject(input: {
   name: string;
   description?: string;
   color: string;
 }): Promise<Project> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
+  const userId = await currentUserId();
   const name = input.name.trim();
   const slug = await uniqueSlugFor(name, userId);
 
-  const { data: project, error } = await supabase
-    .from("projects")
-    .insert({
-      user_id: userId,
-      name,
-      slug,
-      description: input.description?.trim() || null,
-      color: input.color,
-    })
-    .select()
-    .single();
+  // Project + default columns in one transaction, so a failure can't leave
+  // a project without columns behind.
+  const { data, error } = await supabase.rpc("create_project_with_columns", {
+    p_name: name,
+    p_slug: slug,
+    p_description: input.description?.trim() || null,
+    p_color: input.color,
+    p_columns: DEFAULT_COLUMNS.map((column) => ({ name: column.name, color: column.color })),
+  });
   if (error) throw error;
-
-  const { error: columnsError } = await supabase.from("columns").insert(
-    DEFAULT_COLUMNS.map((column, index) => ({
-      project_id: project.id,
-      user_id: userId,
-      name: column.name,
-      color: column.color,
-      position: index,
-    }))
-  );
-  if (columnsError) throw columnsError;
-
-  return project;
+  return data;
 }
 
 export async function updateProject(
@@ -107,11 +133,16 @@ export async function updateProject(
   const patch: Partial<Project> = { ...updates };
 
   if (updates.name) {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
-    const userId = userData.user?.id;
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await currentUserId();
     patch.slug = await uniqueSlugFor(updates.name, userId, projectId);
+  } else if (updates.is_archived === false) {
+    // Unarchiving: names and slugs are only unique among active projects, so
+    // another project may have taken this one's name or slug while it was
+    // archived. Pick free ones instead of failing on the unique index.
+    const userId = await currentUserId();
+    const current = await getProject(projectId);
+    patch.name = await uniqueNameFor(current.name, userId, projectId);
+    patch.slug = await uniqueSlugFor(patch.name, userId, projectId);
   }
 
   const { data, error } = await supabase
@@ -130,161 +161,17 @@ export async function deleteProject(projectId: string): Promise<void> {
 }
 
 export async function duplicateProject(project: Project): Promise<Project> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
-  // Avoid colliding with the unique (user_id, lower(name)) constraint on
-  // active projects. One query for all candidate names; the pattern may
-  // over-match if the name contains % or _, which only means extra rows in
-  // the taken-set — the exact comparison below stays correct.
-  const baseName = `${project.name} (copy)`;
-  const { data: existing, error: existingError } = await supabase
-    .from("projects")
-    .select("name")
-    .eq("user_id", userId)
-    .eq("is_archived", false)
-    .ilike("name", `${baseName}%`);
-  if (existingError) throw existingError;
-
-  const takenNames = new Set((existing ?? []).map((row) => row.name.toLowerCase()));
-  let name = baseName;
-  let attempt = 1;
-  while (takenNames.has(name.toLowerCase())) {
-    attempt += 1;
-    name = `${baseName} ${attempt}`;
-  }
+  const userId = await currentUserId();
+  const name = await uniqueNameFor(`${project.name} (copy)`, userId);
   const slug = await uniqueSlugFor(name, userId);
 
-  const { data: newProject, error } = await supabase
-    .from("projects")
-    .insert({
-      user_id: userId,
-      name,
-      slug,
-      description: project.description,
-      color: project.color,
-    })
-    .select()
-    .single();
+  // Columns, non-archived tasks, subtasks and tags are copied server-side in
+  // one transaction, so a failure part-way can't leave a half-copied project.
+  const { data, error } = await supabase.rpc("duplicate_project", {
+    p_source_id: project.id,
+    p_name: name,
+    p_slug: slug,
+  });
   if (error) throw error;
-
-  const { data: columns, error: columnsError } = await supabase
-    .from("columns")
-    .select("*")
-    .eq("project_id", project.id)
-    .order("position", { ascending: true });
-  if (columnsError) throw columnsError;
-
-  if (columns && columns.length > 0) {
-    const { data: insertedColumns, error: insertColumnsError } = await supabase
-      .from("columns")
-      .insert(
-        columns.map((c) => ({
-          project_id: newProject.id,
-          user_id: userId,
-          name: c.name,
-          color: c.color,
-          position: c.position,
-          is_collapsed: c.is_collapsed,
-        }))
-      )
-      .select();
-    if (insertColumnsError) throw insertColumnsError;
-
-    // Correlate old -> new columns by position rather than array index:
-    // PostgREST does not guarantee that the inserted rows come back in the
-    // same order as the input, and positions are distinct within a project.
-    const insertedColumnByPosition = new Map(insertedColumns.map((c) => [c.position, c.id]));
-    const columnIdMap = new Map<string, string>();
-    for (const old of columns) {
-      const newId = insertedColumnByPosition.get(old.position);
-      if (newId) columnIdMap.set(old.id, newId);
-    }
-    const fallbackColumnId = insertedColumns[0].id;
-
-    // Pull the source tasks together with their subtasks and tags so the
-    // duplicate carries them too (matching duplicateTask), instead of copying
-    // only the bare task rows.
-    const { data: tasks, error: tasksError } = await supabase
-      .from("tasks")
-      .select("*, subtasks(*), task_tags(tag_id)")
-      .eq("project_id", project.id)
-      .eq("is_archived", false);
-    if (tasksError) throw tasksError;
-
-    type SourceTask = Task & {
-      subtasks: { title: string; is_completed: boolean; position: number }[];
-      task_tags: { tag_id: string }[];
-    };
-    const sourceTasks = (tasks ?? []) as unknown as SourceTask[];
-
-    if (sourceTasks.length > 0) {
-      const { data: insertedTasks, error: insertTasksError } = await supabase
-        .from("tasks")
-        .insert(
-          sourceTasks.map((t) => ({
-            project_id: newProject.id,
-            column_id: columnIdMap.get(t.column_id) ?? fallbackColumnId,
-            user_id: userId,
-            title: t.title,
-            description: t.description,
-            position: t.position,
-            priority: t.priority,
-            start_date: t.start_date,
-            due_date: t.due_date,
-            recurrence_type: t.recurrence_type,
-            recurrence_cron: t.recurrence_cron,
-          }))
-        )
-        .select();
-      if (insertTasksError) throw insertTasksError;
-
-      // Correlate old -> new tasks by (new column_id, position), which is
-      // unique within the board, so subtasks/tags land on the right copies
-      // regardless of the order PostgREST returns the inserted rows in.
-      const insertedTaskByKey = new Map(
-        insertedTasks.map((t) => [`${t.column_id}:${t.position}`, t.id])
-      );
-      const oldToNewTaskId = new Map<string, string>();
-      for (const t of sourceTasks) {
-        const newColumnId = columnIdMap.get(t.column_id) ?? fallbackColumnId;
-        const newTaskId = insertedTaskByKey.get(`${newColumnId}:${t.position}`);
-        if (newTaskId) oldToNewTaskId.set(t.id, newTaskId);
-      }
-
-      const subtaskRows = sourceTasks.flatMap((t) => {
-        const newTaskId = oldToNewTaskId.get(t.id);
-        if (!newTaskId) return [];
-        return t.subtasks.map((s) => ({
-          task_id: newTaskId,
-          user_id: userId,
-          title: s.title,
-          is_completed: s.is_completed,
-          position: s.position,
-        }));
-      });
-      if (subtaskRows.length > 0) {
-        const { error: insertSubtasksError } = await supabase.from("subtasks").insert(subtaskRows);
-        if (insertSubtasksError) throw insertSubtasksError;
-      }
-
-      const tagRows = sourceTasks.flatMap((t) => {
-        const newTaskId = oldToNewTaskId.get(t.id);
-        if (!newTaskId) return [];
-        return t.task_tags.map((tt) => ({
-          task_id: newTaskId,
-          tag_id: tt.tag_id,
-          user_id: userId,
-        }));
-      });
-      if (tagRows.length > 0) {
-        const { error: insertTagsError } = await supabase.from("task_tags").insert(tagRows);
-        if (insertTagsError) throw insertTagsError;
-      }
-    }
-  }
-
-  return newProject;
+  return data;
 }
