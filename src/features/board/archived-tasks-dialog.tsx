@@ -73,7 +73,7 @@ export function ArchivedTasksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-xl">
+      <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] flex-col sm:max-h-[85vh] sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Archived tasks</DialogTitle>
           <DialogDescription>

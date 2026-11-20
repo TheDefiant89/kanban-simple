@@ -75,7 +75,7 @@ export function ProjectTile({
               <Button
                 variant="ghost"
                 size="icon"
-                className="-mr-2 -mt-1 h-8 w-8 shrink-0 opacity-60 group-hover:opacity-100"
+                className="-mr-2 -mt-1 h-8 w-8 shrink-0 pointer-fine:opacity-60 pointer-fine:group-hover:opacity-100"
                 aria-label="Project actions"
               >
                 <MoreHorizontal className="h-4 w-4" />

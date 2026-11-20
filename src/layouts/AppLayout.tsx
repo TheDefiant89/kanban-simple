@@ -36,7 +36,7 @@ export function AppLayout() {
     "flex h-9 w-9 items-center justify-center rounded-[9px] border border-border bg-transparent text-muted-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)] hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-background">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background">
       <NeonBackdrop />
       <header
         className="sticky top-0 z-40 flex h-[58px] items-center gap-3 border-b px-4 backdrop-blur-[14px]"

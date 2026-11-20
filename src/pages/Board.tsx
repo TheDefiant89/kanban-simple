@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -56,6 +57,7 @@ import { buildTaskPredicate } from "@/lib/task-filters";
 import { sortTasks } from "@/lib/sort-tasks";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { cn } from "@/lib/utils";
 import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 const noop = () => {};
@@ -135,7 +137,12 @@ export default function Board() {
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Mouse and touch get separate activation rules. A mouse drag starts
+    // after a few pixels of movement; on touch that would hijack every
+    // swipe, so a drag needs a short press-and-hold and a plain swipe
+    // scrolls the column / board as normal.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -392,7 +399,7 @@ export default function Board() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/dashboard" aria-label="Back to dashboard">
             <ArrowLeft className="h-4 w-4" />
@@ -431,7 +438,14 @@ export default function Board() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
+        {/* On phones, columns snap one-per-screen while swiping. Snapping is
+            turned off mid-drag so it doesn't fight dnd-kit's auto-scroll. */}
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain p-3 scrollbar-thin sm:p-4",
+            !activeTask && !activeColumn && "max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-3"
+          )}
+        >
           <SortableContext items={items.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             {items.map((column) => (
               <ColumnComponent
@@ -450,7 +464,7 @@ export default function Board() {
 
           <Button
             variant="outline"
-            className="h-11 w-72 shrink-0 justify-start border-dashed text-muted-foreground"
+            className="h-11 w-[calc(100vw-2.5rem)] shrink-0 snap-start justify-start border-dashed text-muted-foreground sm:w-72"
             onClick={() => {
               setEditingColumn(null);
               setColumnDialogOpen(true);
