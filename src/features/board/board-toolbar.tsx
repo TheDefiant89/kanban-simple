@@ -1,4 +1,4 @@
-import { Filter, Search, Tag as TagIcon } from "lucide-react";
+import { Archive, Filter, Search, Tag as TagIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,7 @@ interface BoardToolbarProps {
   onTogglePriority: (priority: Priority) => void;
   onToggleTag: (tagId: string) => void;
   onShowCompletedChange: (value: boolean) => void;
+  onOpenArchived: () => void;
 }
 
 export function BoardToolbar({
@@ -54,6 +55,7 @@ export function BoardToolbar({
   onTogglePriority,
   onToggleTag,
   onShowCompletedChange,
+  onOpenArchived,
 }: BoardToolbarProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background/60 px-4 py-2.5">
@@ -149,6 +151,9 @@ export function BoardToolbar({
         <Label htmlFor="show-completed" className="whitespace-nowrap text-sm font-normal">
           Show completed
         </Label>
+        <Button variant="outline" size="sm" className="ml-1" onClick={onOpenArchived}>
+          <Archive className="h-4 w-4" /> Archived
+        </Button>
       </div>
     </div>
   );

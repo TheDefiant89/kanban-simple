@@ -18,5 +18,7 @@ export const queryKeys = {
   columns: (projectId: string) => ["columns", projectId] as const,
   tasks: (projectId: string) => ["tasks", projectId] as const,
   tasksAll: ["tasks"] as const,
+  archivedTasks: (projectId: string) => ["archived-tasks", projectId] as const,
+  autoArchiveDays: ["profile", "auto-archive-days"] as const,
   tags: ["tags"] as const,
 };

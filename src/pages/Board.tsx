@@ -36,6 +36,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ColumnComponent } from "@/features/board/column";
 import { ColumnDialog } from "@/features/board/column-dialog";
 import { BoardToolbar } from "@/features/board/board-toolbar";
+import { ArchivedTasksDialog } from "@/features/board/archived-tasks-dialog";
 import { TaskCard } from "@/features/board/task-card";
 import { TaskDetailDialog } from "@/features/tasks/task-detail-dialog";
 import {
@@ -65,6 +66,7 @@ export default function Board() {
   const projectId = slugLookup.data?.id ?? "";
 
   const { project, columns, isLoading: boardDataLoading } = useBoardData(projectId);
+  const columnNames = useMemo(() => new Map(columns.map((c) => [c.id, c.name])), [columns]);
   const isLoading = slugLookup.isLoading || (!!projectId && boardDataLoading);
   useDocumentTitle(project?.name);
 
@@ -84,6 +86,7 @@ export default function Board() {
   const originalColumnId = useRef<string | null>(null);
 
   const [columnDialogOpen, setColumnDialogOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [deletingColumn, setDeletingColumn] = useState<Column | null>(null);
 
@@ -376,6 +379,14 @@ export default function Board() {
         onTogglePriority={(p) => togglePriority(projectId, p)}
         onToggleTag={(id) => toggleTag(projectId, id)}
         onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
+        onOpenArchived={() => setArchivedOpen(true)}
+      />
+
+      <ArchivedTasksDialog
+        open={archivedOpen}
+        onOpenChange={setArchivedOpen}
+        projectId={projectId}
+        columnNames={columnNames}
       />
 
       <DndContext
