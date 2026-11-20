@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -384,11 +385,11 @@ export function TaskDetailDialog({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="start-date">Start date</Label>
-                <Input id="start-date" type="date" {...register("startDate")} />
+                <DateInput id="start-date" {...register("startDate")} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="due-date">Due date</Label>
-                <Input id="due-date" type="date" {...register("dueDate")} />
+                <DateInput id="due-date" {...register("dueDate")} />
                 {errors.dueDate && (
                   <p className="text-xs text-destructive">{errors.dueDate.message}</p>
                 )}
@@ -405,10 +406,9 @@ export function TaskDetailDialog({
                       )
                     }
                   />
-                  <Input
+                  <DateInput
                     id="completed-date"
-                    type="date"
-                    className="flex-1"
+                    className="min-w-0 flex-1"
                     {...register("completedDate")}
                   />
                 </div>

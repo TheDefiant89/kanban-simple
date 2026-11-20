@@ -4,7 +4,7 @@ import { NeonBackdrop } from "@/components/shared/neon-backdrop";
 
 export function AuthLayout() {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 sm:py-10">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-[max(1rem,env(safe-area-inset-left),env(safe-area-inset-right))] py-[max(2rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] sm:px-6 sm:py-10">
       <NeonBackdrop />
       <div className="relative z-10 w-full max-w-[400px]">
         <div className="mb-7 flex flex-col items-center gap-3">

@@ -202,7 +202,7 @@ export default function Dashboard() {
       <Button
         onClick={openCreateDialog}
         size="icon"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] h-14 w-14 rounded-full shadow-lg sm:hidden"
         aria-label="New project"
       >
         <Plus className="h-6 w-6" />

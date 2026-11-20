@@ -1,8 +1,9 @@
-import { Archive, Filter, Search, Tag as TagIcon } from "lucide-react";
+import { Archive, CircleCheck, Filter, Search, Tag as TagIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -75,7 +76,7 @@ export function BoardToolbar({
           and the controls flow in the parent row as before. */}
       <div className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:contents [&::-webkit-scrollbar]:hidden">
         <Select value={filters.due} onValueChange={(v) => onDueChange(v as DueDateFilter)}>
-          <SelectTrigger className="w-36 shrink-0 sm:w-40">
+          <SelectTrigger className="w-32 shrink-0 sm:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -86,6 +87,23 @@ export function BoardToolbar({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Phones: "Show completed" as a toggle chip next to the other
+            filters, where it's visible without swiping. The labelled
+            switch further along takes over from sm up. */}
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={filters.showCompleted}
+          onClick={() => onShowCompletedChange(!filters.showCompleted)}
+          className={cn(
+            "shrink-0 sm:hidden",
+            filters.showCompleted && "border-primary bg-primary/10 text-primary hover:text-primary"
+          )}
+        >
+          <CircleCheck className="h-3.5 w-3.5" />
+          Completed
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -148,14 +166,18 @@ export function BoardToolbar({
 
         <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
           <Switch
+            className="max-sm:hidden"
             id="show-completed"
             checked={filters.showCompleted}
             onCheckedChange={onShowCompletedChange}
           />
-          <Label htmlFor="show-completed" className="whitespace-nowrap text-sm font-normal">
+          <Label
+            htmlFor="show-completed"
+            className="whitespace-nowrap text-sm font-normal max-sm:hidden"
+          >
             Show completed
           </Label>
-          <Button variant="outline" size="sm" className="ml-1" onClick={onOpenArchived}>
+          <Button variant="outline" size="sm" className="sm:ml-1" onClick={onOpenArchived}>
             <Archive className="h-4 w-4" /> Archived
           </Button>
         </div>
