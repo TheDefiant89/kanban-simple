@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PriorityBadge } from "@/components/shared/priority-badge";
 import { formatDate, isOverdue } from "@/lib/dates";
+import { isTempTask } from "@/features/board/quick-add";
 import { cn } from "@/lib/utils";
 import { PRIORITY_COLORS, type TaskWithRelations } from "@/types";
 
@@ -28,6 +29,8 @@ export const TaskCard = memo(function TaskCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: "task", task },
+    // Quick-add placeholders can't be moved until their row exists.
+    disabled: isTempTask(task),
   });
 
   const style = {

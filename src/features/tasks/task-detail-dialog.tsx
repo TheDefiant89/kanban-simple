@@ -58,6 +58,8 @@ interface TaskDetailDialogProps {
   projectId: string;
   columns: ColumnWithTasks[];
   defaultColumnId?: string;
+  /** Pre-fills the title when creating (e.g. from the board's quick-add). */
+  defaultTitle?: string;
 }
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -80,6 +82,7 @@ export function TaskDetailDialog({
   projectId,
   columns,
   defaultColumnId,
+  defaultTitle,
 }: TaskDetailDialogProps) {
   const isEdit = !!task;
   const queryClient = useQueryClient();
@@ -145,7 +148,7 @@ export function TaskDetailDialog({
       setSubtasks(task.subtasks);
     } else {
       reset({
-        title: "",
+        title: defaultTitle ?? "",
         description: "",
         columnId: defaultColumnId ?? columnsRef.current[0]?.id ?? "",
         priority: "medium",
@@ -159,7 +162,7 @@ export function TaskDetailDialog({
       setSubtasks([]);
     }
     setConfirmDelete(false);
-  }, [open, task, defaultColumnId, reset]);
+  }, [open, task, defaultColumnId, defaultTitle, reset]);
 
   const recurrenceType = watch("recurrenceType");
   const completedDate = watch("completedDate");

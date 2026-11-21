@@ -32,6 +32,10 @@ all included. See [Features](#features) below for the full list.
   multiple custom coloured tags, unlimited subtasks with progress ("4 / 10 completed"),
   create/edit/duplicate/archive/delete, drag-and-drop within and across columns with
   optimistic updates persisted immediately to Supabase.
+- **Quick-add:** "Add task" at the bottom of a column opens an inline box: type a title
+  and press Enter, then keep typing the next one. Pasting several lines offers one task
+  per line (up to 20). "Add with details…" opens the full task dialog with the title
+  filled in.
 - **Recurring tasks:** None / Daily / Weekly / Monthly / Custom (cron string, stored for
   a future scheduler). Completing a recurring task keeps its own completion record and
   spawns the next occurrence automatically via a Postgres trigger — see
