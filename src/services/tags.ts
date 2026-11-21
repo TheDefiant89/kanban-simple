@@ -11,13 +11,9 @@ export async function listTags(): Promise<Tag[]> {
 }
 
 export async function createTag(input: { name: string; color: string }): Promise<Tag> {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
   const { data, error } = await supabase
     .from("tags")
-    .insert({ user_id: userId, name: input.name.trim(), color: input.color })
+    .insert({ name: input.name.trim(), color: input.color })
     .select()
     .single();
   if (error) throw error;

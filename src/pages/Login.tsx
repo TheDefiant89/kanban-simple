@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "@/services/auth";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas";
+import { errorMessage } from "@/lib/utils";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function Login() {
       await signIn(values.email, values.password);
       navigate(from, { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      toast.error(errorMessage(error, "Failed to sign in"));
     } finally {
       setSubmitting(false);
     }

@@ -2,6 +2,7 @@ import { supabase } from "@/supabase/client";
 import type { Project } from "@/types";
 import { DEFAULT_COLUMNS } from "@/types";
 import { slugify } from "@/lib/utils";
+import { currentUserId } from "@/services/session";
 
 /**
  * Finds a slug for `name` that isn't already used by one of the user's other
@@ -94,14 +95,6 @@ async function uniqueNameFor(
     name = fit(` ${attempt}`);
   }
   return name;
-}
-
-async function currentUserId(): Promise<string> {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  const userId = data.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-  return userId;
 }
 
 export async function createProject(input: {

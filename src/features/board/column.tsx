@@ -17,10 +17,9 @@ import {
 import { COLUMN_SORTS, COLUMN_SORT_LABELS } from "@/lib/sort-tasks";
 import { TaskCard } from "@/features/board/task-card";
 import { QuickAddComposer } from "@/features/board/quick-add-composer";
+import { dropzoneId } from "@/features/board/dnd-ids";
 import { cn } from "@/lib/utils";
 import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
-
-export const dropzoneId = (columnId: string) => `dropzone::${columnId}`;
 
 interface ColumnComponentProps {
   column: ColumnWithTasks;

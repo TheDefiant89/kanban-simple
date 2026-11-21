@@ -55,6 +55,7 @@ import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { buildTaskPredicate } from "@/lib/task-filters";
 import { isTempTask } from "@/features/board/quick-add";
+import { columnIdFromDropzone } from "@/features/board/dnd-ids";
 import { KeyboardShortcutsDialog } from "@/features/board/keyboard-shortcuts-dialog";
 import { getShortcutAction } from "@/lib/shortcuts";
 import { sortTasks } from "@/lib/sort-tasks";
@@ -195,7 +196,7 @@ export default function Board() {
 
       let toColIdx = prev.findIndex((c) => c.tasks.some((t) => t.id === overId));
       if (toColIdx === -1) {
-        const colId = overId.startsWith("dropzone::") ? overId.slice("dropzone::".length) : overId;
+        const colId = columnIdFromDropzone(overId) ?? overId;
         toColIdx = prev.findIndex((c) => c.id === colId);
       }
       if (toColIdx === -1 || fromColIdx === toColIdx) return prev;
@@ -645,6 +646,7 @@ export default function Board() {
         task={editingTask}
         projectId={projectId}
         columns={columns}
+        taskMutations={taskMutations}
         defaultColumnId={defaultColumnId}
         defaultTitle={defaultTitle}
       />

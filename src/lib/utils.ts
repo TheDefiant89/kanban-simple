@@ -14,3 +14,8 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
   return slug || "project";
 }
+
+/** An error's message for display, or `fallback` when it has none. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}

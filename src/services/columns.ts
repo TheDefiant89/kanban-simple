@@ -17,16 +17,10 @@ export async function createColumn(input: {
   color: string;
   position: number;
 }): Promise<Column> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
   const { data, error } = await supabase
     .from("columns")
     .insert({
       project_id: input.projectId,
-      user_id: userId,
       name: input.name.trim(),
       color: input.color,
       position: input.position,

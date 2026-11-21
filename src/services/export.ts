@@ -1,4 +1,4 @@
-import { supabase } from "@/supabase/client";
+import { currentUserId } from "./session";
 import { listProjects } from "./projects";
 import { listColumns } from "./columns";
 import { listTasks } from "./tasks";
@@ -58,9 +58,7 @@ const TAG_COLUMNS = ["id", "name", "color", "created_at", "updated_at"];
  * tags), matching the schema in supabase/migrations exactly.
  */
 export async function exportUserDataAsCsv(): Promise<void> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  if (!userData.user) throw new Error("Not authenticated");
+  await currentUserId(); // fail fast when signed out
 
   const projects = await listProjects(true);
   const tags = await listTags();

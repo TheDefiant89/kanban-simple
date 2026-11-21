@@ -117,7 +117,7 @@ export type Database = {
       };
       columns: {
         Row: Column;
-        Insert: Partial<Column> & { project_id: string; user_id: string; name: string };
+        Insert: Partial<Column> & { project_id: string; name: string };
         Update: Partial<Column>;
         Relationships: [];
       };
@@ -126,7 +126,6 @@ export type Database = {
         Insert: Partial<Task> & {
           project_id: string;
           column_id: string;
-          user_id: string;
           title: string;
         };
         Update: Partial<Task>;
@@ -134,19 +133,19 @@ export type Database = {
       };
       subtasks: {
         Row: Subtask;
-        Insert: Partial<Subtask> & { task_id: string; user_id: string; title: string };
+        Insert: Partial<Subtask> & { task_id: string; title: string };
         Update: Partial<Subtask>;
         Relationships: [];
       };
       tags: {
         Row: Tag;
-        Insert: Partial<Tag> & { user_id: string; name: string };
+        Insert: Partial<Tag> & { name: string };
         Update: Partial<Tag>;
         Relationships: [];
       };
       task_tags: {
         Row: TaskTag;
-        Insert: Partial<TaskTag> & { task_id: string; tag_id: string; user_id: string };
+        Insert: Partial<TaskTag> & { task_id: string; tag_id: string };
         Update: Partial<TaskTag>;
         Relationships: [];
       };
@@ -188,6 +187,19 @@ export type Database = {
       duplicate_project: {
         Args: { p_source_id: string; p_name: string; p_slug: string };
         Returns: Database["public"]["Tables"]["projects"]["Row"];
+      };
+      duplicate_task: {
+        Args: { p_task_id: string };
+        Returns: string;
+      };
+      project_task_stats: {
+        Args: { p_today: string };
+        Returns: {
+          project_id: string;
+          task_count: number;
+          completed_count: number;
+          overdue_count: number;
+        }[];
       };
     };
     Enums: Record<string, never>;

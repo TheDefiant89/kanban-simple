@@ -47,17 +47,21 @@ export function isOverdue(dueDate: string | null, completedAt: string | null): b
   return due < startOfToday();
 }
 
+/** The local calendar day of `date` as YYYY-MM-DD (not the UTC day). */
+export function toLocalDateString(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function formatDate(value: string | null, pattern: DateFormat = "MMM d, yyyy"): string {
   const date = parseDate(value);
   if (!date) return "";
   switch (pattern) {
     case "MMM d":
       return MONTH_DAY.format(date);
-    case "yyyy-MM-dd": {
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${date.getFullYear()}-${month}-${day}`;
-    }
+    case "yyyy-MM-dd":
+      return toLocalDateString(date);
     default:
       return MONTH_DAY_YEAR.format(date);
   }

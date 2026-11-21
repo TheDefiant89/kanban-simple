@@ -27,6 +27,7 @@ import { changePasswordSchema, type ChangePasswordInput } from "@/features/auth/
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { TagManager } from "@/features/settings/tag-manager";
 import { AutoArchiveSetting } from "@/features/settings/auto-archive-setting";
+import { errorMessage } from "@/lib/utils";
 
 export default function Settings() {
   useDocumentTitle("Settings");
@@ -53,7 +54,7 @@ export default function Settings() {
       toast.success("Password updated");
       reset();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update password");
+      toast.error(errorMessage(error, "Failed to update password"));
     } finally {
       setChangingPassword(false);
     }
@@ -64,7 +65,7 @@ export default function Settings() {
       await signOut();
       navigate("/login");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign out");
+      toast.error(errorMessage(error, "Failed to sign out"));
     }
   };
 
@@ -74,7 +75,7 @@ export default function Settings() {
       await exportUserDataAsCsv();
       toast.success("Export downloaded");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export data");
+      toast.error(errorMessage(error, "Failed to export data"));
     } finally {
       setExporting(false);
     }
@@ -87,7 +88,7 @@ export default function Settings() {
       toast.success("Account deleted");
       navigate("/login", { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete account");
+      toast.error(errorMessage(error, "Failed to delete account"));
       setDeletePassword("");
       setDeleting(false);
       return;
