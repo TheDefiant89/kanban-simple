@@ -10,6 +10,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { signUp, resendSignUpVerification } from "@/services/auth";
 import { registerSchema, type RegisterInput } from "@/features/auth/schemas";
+import { errorMessage } from "@/lib/utils";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function Register() {
         setSentEmail(email);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create account");
+      toast.error(errorMessage(error, "Failed to create account"));
     } finally {
       setSubmitting(false);
     }
@@ -48,7 +49,7 @@ export default function Register() {
       await resendSignUpVerification(sentEmail);
       toast.success("Verification email resent");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to resend email");
+      toast.error(errorMessage(error, "Failed to resend email"));
     } finally {
       setResending(false);
     }

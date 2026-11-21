@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NeonBackdrop } from "@/components/shared/neon-backdrop";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 
 export function AppLayout() {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ export function AppLayout() {
       toast.success("Signed out");
       navigate("/login");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign out");
+      toast.error(errorMessage(error, "Failed to sign out"));
     }
   };
 

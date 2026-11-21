@@ -66,7 +66,7 @@ export function ArchivedTasksDialog({
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       toast.success(`Restored "${task.title}"`);
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to unarchive task"),
+    meta: { errorMessage: "Failed to unarchive task" },
   });
 
   const tasks = archived.data?.pages.flatMap((p) => p.tasks) ?? [];

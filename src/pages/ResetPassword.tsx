@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { signOut, updatePassword } from "@/services/auth";
 import { useAuth } from "@/features/auth/auth-context";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/features/auth/schemas";
+import { errorMessage } from "@/lib/utils";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function ResetPassword() {
       toast.success("Password updated. Please sign in again.");
       navigate("/login", { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update password");
+      toast.error(errorMessage(error, "Failed to update password"));
     } finally {
       setSubmitting(false);
     }

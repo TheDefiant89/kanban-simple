@@ -1,6 +1,6 @@
 import { supabase } from "@/supabase/client";
 import { fetchAllPages } from "@/lib/fetch-all";
-import type { Priority, RecurrenceType, Tag, Task, TaskWithRelations } from "@/types";
+import type { Priority, RecurrenceType, Subtask, Tag, Task, TaskWithRelations } from "@/types";
 
 type RawTask = Task & {
   subtasks: TaskWithRelations["subtasks"];
@@ -76,7 +76,7 @@ export async function listArchivedTasks(
   return { tasks: rows.slice(0, ARCHIVED_PAGE_SIZE), hasMore: rows.length > ARCHIVED_PAGE_SIZE };
 }
 
-export async function createTask(input: {
+export interface CreateTaskInput {
   projectId: string;
   columnId: string;
   title: string;
@@ -88,18 +88,21 @@ export async function createTask(input: {
   recurrenceType?: RecurrenceType;
   recurrenceCron?: string | null;
   tagIds?: string[];
-}): Promise<TaskWithRelations> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
+  /** Subtask titles, in order. */
+  subtasks?: string[];
+}
 
-  const { data: task, error } = await supabase
+/**
+ * Inserts a task, then its tags and subtasks in parallel, and returns the
+ * full row assembled from what those inserts return -- no re-fetch.
+ * user_id comes from the database's auth.uid() default.
+ */
+export async function createTask(input: CreateTaskInput): Promise<TaskWithRelations> {
+  const { data, error } = await supabase
     .from("tasks")
     .insert({
       project_id: input.projectId,
       column_id: input.columnId,
-      user_id: userId,
       title: input.title.trim(),
       description: input.description?.trim() || null,
       position: input.position,
@@ -112,23 +115,63 @@ export async function createTask(input: {
     .select(TASK_SELECT)
     .single();
   if (error) throw error;
+  const task = hydrate(data as unknown as RawTask);
 
-  if (input.tagIds && input.tagIds.length > 0) {
-    await setTaskTags(task.id, input.tagIds);
-    return getTask(task.id);
-  }
-
-  return hydrate(task as unknown as RawTask);
+  const [tags, subtasks] = await Promise.all([
+    addTaskTags(task.id, input.tagIds ?? []),
+    insertSubtasks(
+      task.id,
+      (input.subtasks ?? []).map((title, position) => ({ title: title.trim(), position }))
+    ),
+  ]);
+  return { ...task, tags, subtasks };
 }
 
-export async function getTask(taskId: string): Promise<TaskWithRelations> {
+async function insertSubtasks(
+  taskId: string,
+  rows: { title: string; position: number; is_completed?: boolean }[]
+): Promise<Subtask[]> {
+  if (rows.length === 0) return [];
   const { data, error } = await supabase
-    .from("tasks")
-    .select(TASK_SELECT)
-    .eq("id", taskId)
-    .single();
+    .from("subtasks")
+    .insert(rows.map((row) => ({ ...row, task_id: taskId })))
+    .select();
   if (error) throw error;
-  return hydrate(data as unknown as RawTask);
+  return [...data].sort((a, b) => a.position - b.position);
+}
+
+async function addTaskTags(taskId: string, tagIds: string[]): Promise<Tag[]> {
+  if (tagIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("task_tags")
+    .insert(tagIds.map((tagId) => ({ task_id: taskId, tag_id: tagId })))
+    .select("tags(*)");
+  if (error) throw error;
+  return (data as unknown as { tags: Tag | null }[])
+    .map((row) => row.tags)
+    .filter((t): t is Tag => t !== null);
+}
+
+async function removeTaskTags(taskId: string, tagIds: string[]): Promise<void> {
+  if (tagIds.length === 0) return;
+  const { error } = await supabase
+    .from("task_tags")
+    .delete()
+    .eq("task_id", taskId)
+    .in("tag_id", tagIds);
+  if (error) throw error;
+}
+
+/**
+ * Applies a tag change as a diff: only added links are inserted and only
+ * removed ones deleted (in parallel), so an unchanged tag set costs nothing
+ * and a failed insert can't leave the task with all its tags stripped.
+ */
+export async function updateTaskTags(
+  taskId: string,
+  change: { add: string[]; remove: string[] }
+): Promise<void> {
+  await Promise.all([addTaskTags(taskId, change.add), removeTaskTags(taskId, change.remove)]);
 }
 
 export interface UpdateTaskInput {
@@ -156,14 +199,6 @@ export async function updateTask(taskId: string, updates: UpdateTaskInput): Prom
   return data;
 }
 
-export async function moveTask(taskId: string, columnId: string, position: number): Promise<void> {
-  const { error } = await supabase
-    .from("tasks")
-    .update({ column_id: columnId, position })
-    .eq("id", taskId);
-  if (error) throw error;
-}
-
 export async function reorderTasks(
   updates: { id: string; position: number; column_id?: string }[]
 ): Promise<void> {
@@ -178,18 +213,17 @@ export async function deleteTask(taskId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function duplicateTask(taskId: string): Promise<TaskWithRelations> {
-  const original = await getTask(taskId);
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
+/**
+ * Copies a task (with its subtasks and tags) right after the original. Works
+ * from the caller's already-loaded task rather than re-fetching it. The
+ * make-room trigger shifts the tasks below, so callers re-fetch the board.
+ */
+export async function duplicateTask(original: TaskWithRelations): Promise<void> {
   const { data: created, error } = await supabase
     .from("tasks")
     .insert({
       project_id: original.project_id,
       column_id: original.column_id,
-      user_id: userId,
       title: `${original.title} (copy)`,
       description: original.description,
       position: original.position + 1,
@@ -199,30 +233,24 @@ export async function duplicateTask(taskId: string): Promise<TaskWithRelations> 
       recurrence_type: original.recurrence_type,
       recurrence_cron: original.recurrence_cron,
     })
-    .select()
+    .select("id")
     .single();
   if (error) throw error;
 
-  if (original.subtasks.length > 0) {
-    await supabase.from("subtasks").insert(
+  await Promise.all([
+    insertSubtasks(
+      created.id,
       original.subtasks.map((s) => ({
-        task_id: created.id,
-        user_id: userId,
         title: s.title,
         is_completed: s.is_completed,
         position: s.position,
       }))
-    );
-  }
-
-  if (original.tags.length > 0) {
-    await setTaskTags(
+    ),
+    addTaskTags(
       created.id,
       original.tags.map((t) => t.id)
-    );
-  }
-
-  return getTask(created.id);
+    ),
+  ]);
 }
 
 export interface TaskStat {
@@ -243,20 +271,4 @@ export async function listTaskStatsForUser(): Promise<TaskStat[]> {
       .order("id", { ascending: true })
       .range(from, to)
   );
-}
-
-export async function setTaskTags(taskId: string, tagIds: string[]): Promise<void> {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-
-  const { error: deleteError } = await supabase.from("task_tags").delete().eq("task_id", taskId);
-  if (deleteError) throw deleteError;
-
-  if (tagIds.length === 0) return;
-
-  const { error: insertError } = await supabase
-    .from("task_tags")
-    .insert(tagIds.map((tagId) => ({ task_id: taskId, tag_id: tagId, user_id: userId })));
-  if (insertError) throw insertError;
 }

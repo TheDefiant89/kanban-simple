@@ -1,16 +1,9 @@
 import { supabase } from "@/supabase/client";
+import { currentUserId } from "@/services/session";
 
 /** Days after completion before a task is auto-archived; null = never. */
 export type AutoArchiveDays = 7 | 14 | 30 | 90 | null;
 export const AUTO_ARCHIVE_OPTIONS: AutoArchiveDays[] = [null, 7, 14, 30, 90];
-
-async function currentUserId(): Promise<string> {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  const userId = data.user?.id;
-  if (!userId) throw new Error("Not authenticated");
-  return userId;
-}
 
 export async function getAutoArchiveDays(): Promise<AutoArchiveDays> {
   const userId = await currentUserId();

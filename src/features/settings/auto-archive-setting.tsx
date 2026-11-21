@@ -15,7 +15,7 @@ import {
   setAutoArchiveDays,
   type AutoArchiveDays,
 } from "@/services/profile";
-import { queryKeys } from "@/lib/query-client";
+import { patchOptimistically, queryKeys, rollback } from "@/lib/query-client";
 
 const label = (days: AutoArchiveDays) => (days === null ? "Never" : `After ${days} days`);
 const toValue = (days: AutoArchiveDays) => (days === null ? "off" : String(days));
@@ -28,20 +28,15 @@ export function AutoArchiveSetting() {
 
   const update = useMutation({
     mutationFn: setAutoArchiveDays,
-    onMutate: async (days) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.autoArchiveDays });
-      const previous = queryClient.getQueryData<AutoArchiveDays>(queryKeys.autoArchiveDays);
-      queryClient.setQueryData(queryKeys.autoArchiveDays, days);
-      return { previous };
-    },
+    onMutate: (days) =>
+      patchOptimistically<AutoArchiveDays>(queryClient, queryKeys.autoArchiveDays, () => days),
     onSuccess: (_data, days) =>
       toast.success(
         days === null ? "Auto-archive turned off" : `Completed tasks will be archived after ${days} days`
       ),
-    onError: (error: Error, _days, context) => {
-      queryClient.setQueryData(queryKeys.autoArchiveDays, context?.previous);
-      toast.error(error.message || "Failed to update auto-archive");
-    },
+    onError: (_error, _days, context) =>
+      rollback(queryClient, queryKeys.autoArchiveDays, context),
+    meta: { errorMessage: "Failed to update auto-archive" },
   });
 
   if (setting.isPending) return <Skeleton className="h-9 w-48" />;

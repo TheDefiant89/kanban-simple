@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-client";
 import { createTag, deleteTag, listTags, updateTag } from "@/services/tags";
 
@@ -17,7 +16,7 @@ export function useTagMutations() {
   const create = useMutation({
     mutationFn: createTag,
     onSuccess: invalidate,
-    onError: (error: Error) => toast.error(error.message || "Failed to create tag"),
+    meta: { errorMessage: "Failed to create tag" },
   });
 
   const update = useMutation({
@@ -32,7 +31,7 @@ export function useTagMutations() {
       invalidate();
       invalidateTasks();
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to update tag"),
+    meta: { errorMessage: "Failed to update tag" },
   });
 
   const remove = useMutation({
@@ -41,7 +40,7 @@ export function useTagMutations() {
       invalidate();
       invalidateTasks();
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to delete tag"),
+    meta: { errorMessage: "Failed to delete tag" },
   });
 
   return { create, update, remove };

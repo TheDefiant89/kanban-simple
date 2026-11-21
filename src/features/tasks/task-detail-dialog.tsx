@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore, Copy, Loader2, Trash2 } from "lucide-react";
 import {
@@ -37,11 +36,11 @@ import {
 import { SubtaskList, type SubtaskItem } from "@/features/tasks/subtask-list";
 import { TagSelector } from "@/features/tasks/tag-selector";
 import { taskFormSchema, type TaskFormInput } from "@/features/tasks/schemas";
-import { useTaskMutations } from "@/features/board/use-board";
+import { useTaskCache, useTaskMutations } from "@/features/board/use-board";
+import { nextPosition } from "@/features/board/quick-add";
 import { useTagMutations, useTags } from "@/features/board/use-tags";
-import { createSubtask, createSubtasks, deleteSubtask, updateSubtask } from "@/services/subtasks";
-import { setTaskTags } from "@/services/tasks";
-import { queryKeys } from "@/lib/query-client";
+import { createSubtask, deleteSubtask, updateSubtask } from "@/services/subtasks";
+import { errorMessage } from "@/lib/utils";
 import { formatDate } from "@/lib/dates";
 import {
   PRIORITIES,
@@ -85,8 +84,8 @@ export function TaskDetailDialog({
   defaultTitle,
 }: TaskDetailDialogProps) {
   const isEdit = !!task;
-  const queryClient = useQueryClient();
   const taskMutations = useTaskMutations(projectId);
+  const taskCache = useTaskCache(projectId);
   const { data: allTags = [] } = useTags();
   const tagMutations = useTagMutations();
 
@@ -167,9 +166,8 @@ export function TaskDetailDialog({
   const recurrenceType = watch("recurrenceType");
   const completedDate = watch("completedDate");
 
-  const invalidateTasks = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.tasks(projectId) });
-
+  // Subtask edits in an existing task save immediately and patch the board
+  // cache with the result; nothing else changes, so no re-fetch.
   const handleAddSubtask = async (title: string) => {
     if (isEdit && task) {
       try {
@@ -178,9 +176,9 @@ export function TaskDetailDialog({
           ...prev,
           { id: created.id, title: created.title, is_completed: created.is_completed },
         ]);
-        invalidateTasks();
+        taskCache.patchTask(task.id, (t) => ({ ...t, subtasks: [...t.subtasks, created] }));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to add subtask");
+        toast.error(errorMessage(error, "Failed to add subtask"));
       }
     } else {
       setSubtasks((prev) => [...prev, { id: crypto.randomUUID(), title, is_completed: false }]);
@@ -189,15 +187,18 @@ export function TaskDetailDialog({
 
   const handleToggleSubtask = async (id: string, completed: boolean) => {
     setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, is_completed: completed } : s)));
-    if (isEdit) {
+    if (isEdit && task) {
       try {
-        await updateSubtask(id, { is_completed: completed });
-        invalidateTasks();
+        const updated = await updateSubtask(id, { is_completed: completed });
+        taskCache.patchTask(task.id, (t) => ({
+          ...t,
+          subtasks: t.subtasks.map((s) => (s.id === id ? updated : s)),
+        }));
       } catch (error) {
         setSubtasks((prev) =>
           prev.map((s) => (s.id === id ? { ...s, is_completed: !completed } : s))
         );
-        toast.error(error instanceof Error ? error.message : "Failed to update subtask");
+        toast.error(errorMessage(error, "Failed to update subtask"));
       }
     }
   };
@@ -205,13 +206,16 @@ export function TaskDetailDialog({
   const handleDeleteSubtask = async (id: string) => {
     const previous = subtasks;
     setSubtasks((prev) => prev.filter((s) => s.id !== id));
-    if (isEdit) {
+    if (isEdit && task) {
       try {
         await deleteSubtask(id);
-        invalidateTasks();
+        taskCache.patchTask(task.id, (t) => ({
+          ...t,
+          subtasks: t.subtasks.filter((s) => s.id !== id),
+        }));
       } catch (error) {
         setSubtasks(previous);
-        toast.error(error instanceof Error ? error.message : "Failed to delete subtask");
+        toast.error(errorMessage(error, "Failed to delete subtask"));
       }
     }
   };
@@ -229,7 +233,8 @@ export function TaskDetailDialog({
 
       if (isEdit && task) {
         await taskMutations.update.mutateAsync({
-          taskId: task.id,
+          task,
+          tagIds: selectedTagIds,
           updates: {
             title: values.title,
             description: values.description || null,
@@ -243,11 +248,9 @@ export function TaskDetailDialog({
               values.recurrenceType === "custom" ? values.recurrenceCron || null : null,
           },
         });
-        await setTaskTags(task.id, selectedTagIds);
-        invalidateTasks();
       } else {
         const targetColumn = columns.find((c) => c.id === values.columnId);
-        const created = await taskMutations.create.mutateAsync({
+        await taskMutations.create.mutateAsync({
           projectId,
           columnId: values.columnId,
           title: values.title,
@@ -255,29 +258,20 @@ export function TaskDetailDialog({
           // After the last task rather than at `tasks.length`: positions can
           // repeat or have gaps (e.g. recurring copies), so a count can land
           // in the middle of the column.
-          position: (targetColumn?.tasks ?? []).reduce(
-            (max, t) => Math.max(max, t.position + 1),
-            0
-          ),
+          position: nextPosition(targetColumn?.tasks ?? [], values.columnId),
           priority: values.priority,
           startDate: values.startDate || null,
           dueDate: values.dueDate || null,
           recurrenceType: values.recurrenceType,
           recurrenceCron: values.recurrenceType === "custom" ? values.recurrenceCron || null : null,
           tagIds: selectedTagIds,
+          subtasks: subtasks.map((subtask) => subtask.title),
         });
-        await createSubtasks(
-          subtasks.map((subtask, index) => ({
-            taskId: created.id,
-            title: subtask.title,
-            position: index,
-          }))
-        );
-        invalidateTasks();
       }
       onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save task");
+    } catch {
+      // The mutation has already shown the error; keep the dialog open so
+      // nothing typed is lost.
     } finally {
       setSubmitting(false);
     }
@@ -444,10 +438,11 @@ export function TaskDetailDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        await taskMutations.duplicate.mutateAsync(task!.id);
-                        onOpenChange(false);
-                      }}
+                      onClick={() =>
+                        taskMutations.duplicate.mutate(task!, {
+                          onSuccess: () => onOpenChange(false),
+                        })
+                      }
                     >
                       <Copy className="h-3.5 w-3.5" /> Duplicate
                     </Button>
@@ -455,13 +450,12 @@ export function TaskDetailDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        await taskMutations.update.mutateAsync({
-                          taskId: task!.id,
-                          updates: { is_archived: !task!.is_archived },
-                        });
-                        onOpenChange(false);
-                      }}
+                      onClick={() =>
+                        taskMutations.update.mutate(
+                          { task: task!, updates: { is_archived: !task!.is_archived } },
+                          { onSuccess: () => onOpenChange(false) }
+                        )
+                      }
                     >
                       {task!.is_archived ? (
                         <>
@@ -511,8 +505,9 @@ export function TaskDetailDialog({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (task) await taskMutations.remove.mutateAsync(task.id);
+              onClick={() => {
+                // Optimistic: the card disappears now; a failure restores it.
+                if (task) taskMutations.remove.mutate(task.id);
                 setConfirmDelete(false);
                 onOpenChange(false);
               }}

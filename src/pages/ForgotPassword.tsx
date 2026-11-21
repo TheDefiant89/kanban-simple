@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sendPasswordReset } from "@/services/auth";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/features/auth/schemas";
+import { errorMessage } from "@/lib/utils";
 
 export default function ForgotPassword() {
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +27,7 @@ export default function ForgotPassword() {
       await sendPasswordReset(values.email);
       setSent(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send reset email");
+      toast.error(errorMessage(error, "Failed to send reset email"));
     } finally {
       setSubmitting(false);
     }

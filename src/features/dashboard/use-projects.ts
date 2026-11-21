@@ -81,7 +81,7 @@ export function useCreateProject() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       toast.success("Project created");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to create project"),
+    meta: { errorMessage: "Failed to create project" },
   });
 }
 
@@ -98,7 +98,7 @@ export function useUpdateProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to update project"),
+    meta: { errorMessage: "Failed to update project" },
   });
 }
 
@@ -110,7 +110,7 @@ export function useDeleteProject() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       toast.success("Project deleted");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to delete project"),
+    meta: { errorMessage: "Failed to delete project" },
   });
 }
 
@@ -122,6 +122,6 @@ export function useDuplicateProject() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       toast.success("Project duplicated");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to duplicate project"),
+    meta: { errorMessage: "Failed to duplicate project" },
   });
 }
