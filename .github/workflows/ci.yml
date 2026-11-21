@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fail on high/critical advisories in packages that ship to the
+      # browser. Dev-only tooling is excluded so a new advisory there doesn't
+      # block unrelated PRs; run a full `npm audit` periodically for those.
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Lint
         run: npm run lint
 
