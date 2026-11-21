@@ -148,6 +148,70 @@ technique:
 - An inline script in `index.html` decodes that query string back into the real URL via
   `history.replaceState` before React Router mounts, so the correct route renders.
 
+## Feature flags
+
+New features can ship to the live site switched off, then be turned on for
+just your account so you can try them against real data. Nobody else sees them
+until you release them. Flags live in two Supabase tables (migration
+`20261121000000_feature_flags.sql`):
+
+- `feature_flags`: one row per flag. `enabled_for_all = true` means released.
+- `feature_flag_users`: which accounts have an unreleased flag turned on.
+
+App users can only read the flags that are on for them; flags can only be
+changed from the Supabase dashboard / SQL editor.
+
+**1. Hide the feature in code.** Add the key to `FEATURE_FLAGS` in
+`src/lib/feature-flags.ts`, then gate the UI:
+
+```tsx
+<FeatureGate flag="bulk-edit">
+  <BulkEditButton />
+</FeatureGate>
+
+// or, for logic rather than markup
+const bulkEdit = useFeatureFlag("bulk-edit");
+```
+
+Merge and deploy as normal. The feature is in the live app but off for
+everyone, including you.
+
+**2. Turn it on for yourself** (Supabase dashboard → SQL editor):
+
+```sql
+insert into public.feature_flags (key, description)
+values ('bulk-edit', 'Select several tasks and edit them together');
+
+insert into public.feature_flag_users (flag_key, user_id)
+select 'bulk-edit', id from auth.users where email = 'you@example.com';
+```
+
+Reload the app (flags are cached for up to 5 minutes). To try a flag locally
+without the database, set `VITE_FEATURE_FLAGS=bulk-edit` in `.env.local`;
+that override only works under `npm run dev`.
+
+**3. Release it to everyone:**
+
+```sql
+update public.feature_flags set enabled_for_all = true where key = 'bulk-edit';
+```
+
+To roll back, set it to `false` again. Once it's stable, remove the gate and
+the `FEATURE_FLAGS` entry from the code, then delete the row
+(`delete from public.feature_flags where key = 'bulk-edit';` also removes its
+per-user rows).
+
+**Things to keep in mind**
+
+- **Flags hide UI, not data.** Flagged code still ships in the public JS
+  bundle, so anyone determined can read it. Anything a feature reads or
+  writes must still be protected by RLS.
+- **The database is shared.** A migration for a flagged feature applies to
+  everyone straight away, so make it additive (new tables/columns with
+  defaults) and never break what the current app relies on.
+- **Fails closed.** If the flags can't be loaded (still loading, signed out,
+  network error, migration not applied yet), every flag reads as off.
+
 ## Database schema & Row Level Security
 
 Tables: `profiles`, `projects`, `columns`, `tasks`, `subtasks`, `tags`, `task_tags`,

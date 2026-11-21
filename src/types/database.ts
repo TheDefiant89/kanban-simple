@@ -100,6 +100,19 @@ export type ActivityLogEntry = {
   created_at: string;
 };
 
+export type FeatureFlagRow = {
+  key: string;
+  description: string | null;
+  enabled_for_all: boolean;
+  created_at: string;
+};
+
+export type FeatureFlagUser = {
+  flag_key: string;
+  user_id: string;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -154,6 +167,19 @@ export type Database = {
         Row: ActivityLogEntry;
         Insert: Partial<ActivityLogEntry> & { user_id: string; action: string };
         Update: Partial<ActivityLogEntry>;
+        Relationships: [];
+      };
+      // Read-only for app users; managed from the Supabase dashboard.
+      feature_flags: {
+        Row: FeatureFlagRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      feature_flag_users: {
+        Row: FeatureFlagUser;
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
     };

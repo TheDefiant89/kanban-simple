@@ -21,4 +21,5 @@ export const queryKeys = {
   archivedTasks: (projectId: string) => ["archived-tasks", projectId] as const,
   autoArchiveDays: ["profile", "auto-archive-days"] as const,
   tags: ["tags"] as const,
+  featureFlags: (userId: string) => ["feature-flags", userId] as const,
 };
