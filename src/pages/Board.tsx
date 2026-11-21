@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -55,6 +55,8 @@ import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { buildTaskPredicate } from "@/lib/task-filters";
 import { isTempTask } from "@/features/board/quick-add";
+import { KeyboardShortcutsDialog } from "@/features/board/keyboard-shortcuts-dialog";
+import { getShortcutAction } from "@/lib/shortcuts";
 import { sortTasks } from "@/lib/sort-tasks";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -101,6 +103,8 @@ export default function Board() {
   const [defaultTitle, setDefaultTitle] = useState<string | undefined>(undefined);
   // The column whose inline quick-add composer is open; one at a time.
   const [composerColumnId, setComposerColumnId] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Filtered view of the board. Column objects keep their identity when
   // their filtered contents haven't changed, so the memoised column/card
@@ -393,6 +397,55 @@ export default function Board() {
 
   const handleDeleteColumn = useCallback((column: Column) => setDeletingColumn(column), []);
 
+  // Board keyboard shortcuts (see lib/shortcuts.ts). Columns are read
+  // through a ref so the listener isn't re-attached on every data change.
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+  const hasProject = !!project;
+  useEffect(() => {
+    if (!hasProject) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const action = getShortcutAction(event);
+      if (!action || isDragging.current) return;
+      // A dialog is open (focus may have left it, e.g. after a click on its
+      // overlay); leave its keys alone.
+      if (document.querySelector("[role='dialog'], [role='alertdialog']")) return;
+      event.preventDefault();
+      switch (action) {
+        case "new-task": {
+          const column = columnsRef.current.find((c) => !c.is_collapsed);
+          if (!column) {
+            toast.info("Add or expand a column first");
+            return;
+          }
+          setComposerColumnId(column.id);
+          // Already open: the composer won't remount, so refocus it.
+          document
+            .querySelector<HTMLTextAreaElement>(`[data-quick-add="${column.id}"] textarea`)
+            ?.focus();
+          return;
+        }
+        case "search":
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+          return;
+        case "toggle-completed": {
+          const next = !filtersRef.current.showCompleted;
+          setShowCompleted(projectId, next);
+          toast(next ? "Showing completed tasks" : "Hiding completed tasks", {
+            id: "show-completed",
+          });
+          return;
+        }
+        case "help":
+          setShortcutsOpen(true);
+          return;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [hasProject, projectId, setShowCompleted]);
+
   const updateColumnMutate = columnMutations.update.mutate;
   const handleChangeSort = useCallback(
     (column: Column, sortBy: ColumnSort) =>
@@ -465,6 +518,7 @@ export default function Board() {
           onToggleTag={(id) => toggleTag(projectId, id)}
           onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
           onOpenArchived={() => setArchivedOpen(true)}
+          searchInputRef={searchInputRef}
         />
       </div>
 
@@ -582,6 +636,8 @@ export default function Board() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <TaskDetailDialog
         open={taskDialogOpen}

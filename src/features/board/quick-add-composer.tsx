@@ -5,6 +5,7 @@ import { joinLines, parseQuickAddInput, QUICK_ADD_MAX_LINES } from "@/features/b
 import { cn } from "@/lib/utils";
 
 interface QuickAddComposerProps {
+  columnId: string;
   columnName: string;
   /** Create one task per title, in order. */
   onAdd: (titles: string[]) => void;
@@ -21,6 +22,7 @@ const MAX_HEIGHT = 160;
  * adds the task and keeps the box open for the next one.
  */
 export function QuickAddComposer({
+  columnId,
   columnName,
   onAdd,
   onClose,
@@ -128,6 +130,7 @@ export function QuickAddComposer({
   return (
     <div
       ref={rootRef}
+      data-quick-add={columnId}
       className="animate-pop rounded-[11px] border bg-card p-2 shadow-sm"
       onBlur={handleBlur}
       onPointerDown={(e) => e.stopPropagation()}

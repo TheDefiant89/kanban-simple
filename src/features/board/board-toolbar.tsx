@@ -47,6 +47,8 @@ interface BoardToolbarProps {
   onToggleTag: (tagId: string) => void;
   onShowCompletedChange: (value: boolean) => void;
   onOpenArchived: () => void;
+  /** Lets the board's "/" shortcut focus the search box. */
+  searchInputRef?: React.Ref<HTMLInputElement>;
 }
 
 export function BoardToolbar({
@@ -58,6 +60,7 @@ export function BoardToolbar({
   onToggleTag,
   onShowCompletedChange,
   onOpenArchived,
+  searchInputRef,
 }: BoardToolbarProps) {
   const filterRowRef = useRef<HTMLDivElement>(null);
   const overflow = useScrollOverflow(filterRowRef);
@@ -67,12 +70,28 @@ export function BoardToolbar({
       <div className="relative w-full sm:max-w-xs short:w-36 short:shrink-0">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          ref={searchInputRef}
           placeholder="Search tasks…"
           aria-label="Search tasks"
-          className="pl-8"
+          aria-keyshortcuts="/"
+          className="peer pl-8 pointer-fine:pr-8"
           value={filters.search}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Escape leaves the search box so board shortcuts work again.
+            if (e.key === "Escape") e.currentTarget.blur();
+          }}
         />
+        {/* Shortcut hint for keyboard users; hidden on touch screens, while
+            typing, and once there's a search term. */}
+        {!filters.search && (
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border bg-panel-2 px-1.5 font-mono text-[11px] leading-5 text-muted-foreground pointer-fine:block peer-focus:hidden"
+          >
+            /
+          </kbd>
+        )}
       </div>
 
       {/* Phones: the filters share one horizontally swipeable row instead of

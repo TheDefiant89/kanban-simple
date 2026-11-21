@@ -250,6 +250,7 @@ export const ColumnComponent = memo(function ColumnComponent({
       <div className="shrink-0 p-2 pt-0">
         {composerOpen ? (
           <QuickAddComposer
+            columnId={column.id}
             columnName={column.name}
             onAdd={(titles) => {
               scrollToEnd.current = column.sort_by === "custom";
