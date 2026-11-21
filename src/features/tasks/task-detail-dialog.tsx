@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -251,7 +252,10 @@ export function TaskDetailDialog({
           // After the last task rather than at `tasks.length`: positions can
           // repeat or have gaps (e.g. recurring copies), so a count can land
           // in the middle of the column.
-          position: (targetColumn?.tasks ?? []).reduce((max, t) => Math.max(max, t.position + 1), 0),
+          position: (targetColumn?.tasks ?? []).reduce(
+            (max, t) => Math.max(max, t.position + 1),
+            0
+          ),
           priority: values.priority,
           startDate: values.startDate || null,
           dueDate: values.dueDate || null,
@@ -337,7 +341,7 @@ export function TaskDetailDialog({
                 </Select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
                 <Label>Recurrence</Label>
                 <Select
                   value={watch("recurrenceType")}
@@ -378,19 +382,19 @@ export function TaskDetailDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="start-date">Start date</Label>
-                <Input id="start-date" type="date" {...register("startDate")} />
+                <DateInput id="start-date" {...register("startDate")} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="due-date">Due date</Label>
-                <Input id="due-date" type="date" {...register("dueDate")} />
+                <DateInput id="due-date" {...register("dueDate")} />
                 {errors.dueDate && (
                   <p className="text-xs text-destructive">{errors.dueDate.message}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
                 <Label htmlFor="completed-date">Completed</Label>
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -402,10 +406,9 @@ export function TaskDetailDialog({
                       )
                     }
                   />
-                  <Input
+                  <DateInput
                     id="completed-date"
-                    type="date"
-                    className="flex-1"
+                    className="min-w-0 flex-1"
                     {...register("completedDate")}
                   />
                 </div>

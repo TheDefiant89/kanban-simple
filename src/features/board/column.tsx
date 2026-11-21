@@ -64,7 +64,7 @@ export const ColumnComponent = memo(function ColumnComponent({
       <div
         ref={setNodeRef}
         style={style}
-        className="relative flex h-full w-11 shrink-0 flex-col items-center gap-2 overflow-hidden rounded-xl border bg-panel py-3"
+        className="relative flex h-full w-11 shrink-0 snap-start flex-col items-center gap-2 overflow-hidden rounded-xl border bg-panel py-3 [-webkit-touch-callout:none]"
       >
         <span
           className="neon absolute inset-x-0 top-0 h-[3px]"
@@ -100,7 +100,9 @@ export const ColumnComponent = memo(function ColumnComponent({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative flex h-full w-72 shrink-0 flex-col overflow-hidden rounded-xl border bg-panel",
+        // Near full-width on phones so one column fills the screen with a
+        // sliver of the next showing; fixed width from sm up.
+        "relative flex h-full w-[calc(100vw-2.5rem)] shrink-0 snap-start flex-col overflow-hidden rounded-xl border bg-panel sm:w-72 short:w-72",
         isDragging && "opacity-50"
       )}
     >
@@ -114,7 +116,7 @@ export const ColumnComponent = memo(function ColumnComponent({
       <div
         {...attributes}
         {...listeners}
-        className="flex shrink-0 cursor-grab items-center gap-2 border-b px-3 pb-2.5 pt-3 active:cursor-grabbing"
+        className="flex shrink-0 cursor-grab select-none items-center gap-2 border-b px-3 pb-2.5 pt-3 active:cursor-grabbing short:pb-1.5 short:pt-2 [-webkit-touch-callout:none]"
       >
         <span
           className="neon-sm h-2.5 w-2.5 shrink-0 rounded-full"
@@ -131,7 +133,7 @@ export const ColumnComponent = memo(function ColumnComponent({
             <Button
               variant="ghost"
               size="icon"
-              className={cn("h-6 w-6", column.sort_by !== "custom" && "text-primary")}
+              className={cn("h-8 w-8 sm:h-6 sm:w-6", column.sort_by !== "custom" && "text-primary")}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Sort tasks (${COLUMN_SORT_LABELS[column.sort_by]})`}
               title={`Sorted by: ${COLUMN_SORT_LABELS[column.sort_by]}`}
@@ -156,7 +158,7 @@ export const ColumnComponent = memo(function ColumnComponent({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-8 w-8 sm:h-6 sm:w-6"
           onClick={(e) => {
             e.stopPropagation();
             onToggleCollapse(column);
@@ -170,7 +172,7 @@ export const ColumnComponent = memo(function ColumnComponent({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-8 w-8 sm:h-6 sm:w-6"
               onClick={(e) => e.stopPropagation()}
               aria-label="Column actions"
             >

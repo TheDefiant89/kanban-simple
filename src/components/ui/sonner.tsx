@@ -9,6 +9,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme === "system" ? "system" : theme}
       className="toaster group"
       position="bottom-right"
+      // Keep toasts above the iOS home indicator / clear of the notch.
+      offset={{
+        bottom: "calc(24px + env(safe-area-inset-bottom))",
+        right: "calc(24px + env(safe-area-inset-right))",
+      }}
+      mobileOffset={{
+        bottom: "calc(16px + env(safe-area-inset-bottom))",
+        left: "calc(16px + env(safe-area-inset-left))",
+        right: "calc(16px + env(safe-area-inset-right))",
+      }}
       toastOptions={{
         classNames: {
           toast:

@@ -43,7 +43,9 @@ all included. See [Features](#features) below for the full list.
   account (with confirmation).
 - **UI:** responsive (mobile/tablet/desktop), light/dark/system theme, loading
   skeletons, empty states, toast notifications, sticky nav, floating action button on
-  mobile.
+  mobile. On phones the board shows one column per screen (swipe sideways to move between
+  them, snapping to each column) and swiping scrolls normally; press and hold a card or
+  column header to drag it.
 
 ## Project structure
 

@@ -47,7 +47,7 @@ export const TaskCard = memo(function TaskCard({
       {...listeners}
       onClick={() => onOpen(task)}
       className={cn(
-        "animate-pop cursor-pointer touch-none select-none gap-0 rounded-[11px] border-l-[3px] p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md",
+        "animate-pop cursor-pointer select-none [-webkit-touch-callout:none] gap-0 rounded-[11px] border-l-[3px] p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md",
         (isDragging || dragging) && "opacity-50",
         task.completed_at && "opacity-60"
       )}

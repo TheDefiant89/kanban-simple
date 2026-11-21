@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -56,6 +57,7 @@ import { buildTaskPredicate } from "@/lib/task-filters";
 import { sortTasks } from "@/lib/sort-tasks";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { cn } from "@/lib/utils";
 import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
 
 const noop = () => {};
@@ -135,7 +137,12 @@ export default function Board() {
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Mouse and touch get separate activation rules. A mouse drag starts
+    // after a few pixels of movement; on touch that would hijack every
+    // swipe, so a drag needs a short press-and-hold and a plain swipe
+    // scrolls the column / board as normal.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -392,29 +399,35 @@ export default function Board() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/dashboard" aria-label="Back to dashboard">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <span
-          className="neon-sm h-3 w-3 rounded-full"
-          style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
-        />
-        <h1 className="font-display truncate text-lg font-semibold">{project.name}</h1>
-      </div>
+      {/* Title and toolbar stack normally; on short screens they share one
+          row so the board gets the height. */}
+      <div className="flex shrink-0 flex-col short:flex-row short:items-center short:border-b">
+        <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 sm:gap-3 sm:px-4 sm:py-3 short:border-b-0 short:py-1 short:pr-1 sm:short:gap-2 sm:short:px-2 sm:short:py-1">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/dashboard" aria-label="Back to dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <span
+            className="neon-sm h-3 w-3 rounded-full"
+            style={{ backgroundColor: project.color, ["--glow-c" as string]: project.color }}
+          />
+          <h1 className="font-display truncate text-lg font-semibold short:max-w-40 short:text-base">
+            {project.name}
+          </h1>
+        </div>
 
-      <BoardToolbar
-        filters={filters}
-        tags={tags}
-        onSearchChange={(v) => setSearch(projectId, v)}
-        onDueChange={(v) => setDue(projectId, v)}
-        onTogglePriority={(p) => togglePriority(projectId, p)}
-        onToggleTag={(id) => toggleTag(projectId, id)}
-        onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
-        onOpenArchived={() => setArchivedOpen(true)}
-      />
+        <BoardToolbar
+          filters={filters}
+          tags={tags}
+          onSearchChange={(v) => setSearch(projectId, v)}
+          onDueChange={(v) => setDue(projectId, v)}
+          onTogglePriority={(p) => togglePriority(projectId, p)}
+          onToggleTag={(id) => toggleTag(projectId, id)}
+          onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
+          onOpenArchived={() => setArchivedOpen(true)}
+        />
+      </div>
 
       <ArchivedTasksDialog
         open={archivedOpen}
@@ -431,7 +444,14 @@ export default function Board() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
+        {/* On phones, columns snap one-per-screen while swiping. Snapping is
+            turned off mid-drag so it doesn't fight dnd-kit's auto-scroll. */}
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain p-3 scrollbar-thin sm:p-4 short:py-2",
+            !activeTask && !activeColumn && "max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-3"
+          )}
+        >
           <SortableContext items={items.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             {items.map((column) => (
               <ColumnComponent
@@ -450,7 +470,7 @@ export default function Board() {
 
           <Button
             variant="outline"
-            className="h-11 w-72 shrink-0 justify-start border-dashed text-muted-foreground"
+            className="h-11 w-[calc(100vw-2.5rem)] shrink-0 snap-start short:w-72 justify-start border-dashed text-muted-foreground sm:w-72"
             onClick={() => {
               setEditingColumn(null);
               setColumnDialogOpen(true);

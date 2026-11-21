@@ -74,7 +74,7 @@ export function SubtaskList({ subtasks, onAdd, onToggle, onDelete }: SubtaskList
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100"
+              className="h-8 w-8 pointer-fine:h-6 pointer-fine:w-6 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus-visible:opacity-100"
               onClick={() => onDelete(subtask.id)}
               aria-label="Delete subtask"
             >

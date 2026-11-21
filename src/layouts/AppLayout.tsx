@@ -35,11 +35,14 @@ export function AppLayout() {
   const iconBtn =
     "flex h-9 w-9 items-center justify-center rounded-[9px] border border-border bg-transparent text-muted-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)] hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+  // viewport-fit=cover (index.html) lets the page draw under the notch and
+  // home indicator; the env() insets keep content clear of them. They're 0
+  // on devices without those areas.
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-background">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <NeonBackdrop />
       <header
-        className="sticky top-0 z-40 flex h-[58px] items-center gap-3 border-b px-4 backdrop-blur-[14px]"
+        className="sticky top-0 z-40 flex h-[calc(58px+env(safe-area-inset-top))] short:h-[calc(44px+env(safe-area-inset-top))] items-center gap-3 border-b px-4 pt-[env(safe-area-inset-top)] backdrop-blur-[14px]"
         style={{ background: "var(--hdr)" }}
       >
         <Link to="/dashboard" className="flex items-center gap-2.5">
@@ -106,7 +109,7 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]">
         <Outlet />
       </main>
     </div>

@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Short viewports, in practice a phone held sideways: the board's chrome
+   is compacted so the columns keep most of the height. */
+@custom-variant short (@media (max-height: 500px));
 
 /* ---------------------------------------------------------------------------
    Fonts — self-hosted (variable) so they work offline and under the app's
@@ -30,6 +33,9 @@
    --------------------------------------------------------------------------- */
 :root {
   --radius: 0.65rem;
+  /* Lets native controls (date fields, scrollbars, select popups) render
+     in the matching light/dark style. */
+  color-scheme: light;
 
   /* Raw surface tokens (Slate, light) */
   --panel: oklch(0.965 0.006 264);
@@ -71,6 +77,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   /* Raw surface tokens (Slate, dark) */
   --panel: oklch(0.195 0.013 264);
   --panel-2: oklch(0.215 0.015 264);
@@ -254,5 +261,44 @@
   }
   .scrollbar-thin::-webkit-scrollbar-corner {
     background: transparent;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Date inputs (see components/ui/date-input.tsx). The native Chromium picker
+   indicator is hidden but kept clickable, stretched over the themed icon.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .date-input {
+    position: relative;
+    /* iOS centres the value and collapses an empty field; keep it aligned
+       with the other inputs. */
+    text-align: left;
+  }
+  .date-input::-webkit-date-and-time-value {
+    text-align: left;
+  }
+  .date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 2.25rem;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .date-input:hover + .date-input-icon,
+  .date-input:focus-visible + .date-input-icon {
+    color: var(--foreground);
+  }
+  /* Firefox draws its own (color-scheme aware) icon and can't hide it. */
+  @supports (-moz-appearance: none) {
+    .date-input-icon {
+      display: none;
+    }
+    .date-input {
+      padding-right: 0.75rem !important;
+    }
   }
 }
