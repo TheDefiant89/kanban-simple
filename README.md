@@ -36,6 +36,9 @@ all included. See [Features](#features) below for the full list.
   and press Enter, then keep typing the next one. Pasting several lines offers one task
   per line (up to 20). "Add with details…" opens the full task dialog with the title
   filled in.
+- **Keyboard shortcuts** (on the board, when not typing): `N` add a task to the first
+  column, `/` search, `C` show/hide completed tasks, `Esc` close the add-task box or a
+  dialog, `?` list the shortcuts.
 - **Recurring tasks:** None / Daily / Weekly / Monthly / Custom (cron string, stored for
   a future scheduler). Completing a recurring task keeps its own completion record and
   spawns the next occurrence automatically via a Postgres trigger — see
