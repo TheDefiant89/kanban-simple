@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { COLUMN_SORTS, COLUMN_SORT_LABELS } from "@/lib/sort-tasks";
 import { TaskCard } from "@/features/board/task-card";
+import { QuickAddComposer } from "@/features/board/quick-add-composer";
 import { cn } from "@/lib/utils";
 import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
 
@@ -23,7 +24,13 @@ export const dropzoneId = (columnId: string) => `dropzone::${columnId}`;
 
 interface ColumnComponentProps {
   column: ColumnWithTasks;
-  onAddTask: (columnId: string) => void;
+  /** Whether this column's inline quick-add composer is open. */
+  composerOpen: boolean;
+  /** Open (columnId) or close (null) the quick-add composer. */
+  onSetComposer: (columnId: string | null) => void;
+  onQuickAdd: (column: Column, titles: string[]) => void;
+  /** Open the full task dialog for this column, optionally pre-filling the title. */
+  onAddTask: (columnId: string, title?: string) => void;
   onOpenTask: (task: TaskWithRelations) => void;
   onToggleComplete: (task: TaskWithRelations, completed: boolean) => void;
   onRename: (column: Column) => void;
@@ -36,6 +43,9 @@ interface ColumnComponentProps {
 // displayColumns, only columns whose contents changed re-render.
 export const ColumnComponent = memo(function ColumnComponent({
   column,
+  composerOpen,
+  onSetComposer,
+  onQuickAdd,
   onAddTask,
   onOpenTask,
   onToggleComplete,
@@ -58,6 +68,30 @@ export const ColumnComponent = memo(function ColumnComponent({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  // When the composer closes, hand focus back to "Add task" if focus would
+  // otherwise be lost (it was inside the composer, which just unmounted).
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  // Quick-added tasks go to the end of a custom-ordered column; scroll them
+  // into view once they've rendered (the cache update lands a tick later).
+  const scrollToEnd = useRef(false);
+  const taskCount = column.tasks.length;
+  useEffect(() => {
+    if (!scrollToEnd.current) return;
+    scrollToEnd.current = false;
+    const list = listRef.current;
+    list?.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+  }, [taskCount]);
+  const wasComposerOpen = useRef(composerOpen);
+  useEffect(() => {
+    if (wasComposerOpen.current && !composerOpen) {
+      const active = document.activeElement;
+      if (!active || active === document.body) addButtonRef.current?.focus();
+    }
+    wasComposerOpen.current = composerOpen;
+  }, [composerOpen]);
 
   if (column.is_collapsed) {
     return (
@@ -189,7 +223,10 @@ export const ColumnComponent = memo(function ColumnComponent({
       </div>
 
       <div
-        ref={setDropRef}
+        ref={(node) => {
+          setDropRef(node);
+          listRef.current = node;
+        }}
         className={cn(
           "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-thin p-2 transition-colors",
           isOver && "bg-primary/5"
@@ -211,13 +248,29 @@ export const ColumnComponent = memo(function ColumnComponent({
       </div>
 
       <div className="shrink-0 p-2 pt-0">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-muted-foreground"
-          onClick={() => onAddTask(column.id)}
-        >
-          <Plus className="h-4 w-4" /> Add task
-        </Button>
+        {composerOpen ? (
+          <QuickAddComposer
+            columnName={column.name}
+            onAdd={(titles) => {
+              scrollToEnd.current = column.sort_by === "custom";
+              onQuickAdd(column, titles);
+            }}
+            onClose={() => onSetComposer(null)}
+            onAddWithDetails={(title) => {
+              onSetComposer(null);
+              onAddTask(column.id, title);
+            }}
+          />
+        ) : (
+          <Button
+            ref={addButtonRef}
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => onSetComposer(column.id)}
+          >
+            <Plus className="h-4 w-4" /> Add task
+          </Button>
+        )}
       </div>
     </div>
   );

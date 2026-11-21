@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-client";
@@ -16,6 +16,7 @@ import {
 } from "@/services/tasks";
 import { listColumns } from "@/services/columns";
 import { getProject, getProjectBySlug } from "@/services/projects";
+import { nextPosition, TEMP_TASK_PREFIX } from "@/features/board/quick-add";
 
 export function useProjectBySlug(slug: string) {
   const queryClient = useQueryClient();
@@ -242,5 +243,84 @@ export function useTaskMutations(projectId: string) {
     onSettled: invalidate,
   });
 
-  return { create, update, move, reorder, remove, duplicate, setCompleted };
+  // Quick-add (the inline composer). Optimistic: a placeholder task goes
+  // into the cache synchronously, so the next quick-add -- even one queued
+  // in the same tick by a multi-line paste -- sees it and takes the
+  // following position. Positions computed from server data alone would
+  // repeat while earlier saves are still in flight, and the database's
+  // make-room trigger would then shuffle the new tasks out of order.
+  const quickAddPending = useRef(0);
+  const quickCreate = useMutation({
+    mutationFn: (vars: {
+      tempId: string;
+      projectId: string;
+      columnId: string;
+      title: string;
+      position: number;
+    }) => createTask(vars),
+    onSuccess: (created, { tempId }) => {
+      queryClient.setQueryData<TaskWithRelations[]>(tasksKey, (old = []) => {
+        if (old.some((t) => t.id === tempId))
+          return old.map((t) => (t.id === tempId ? created : t));
+        // A refetch replaced the cache mid-flight; it may already hold the row.
+        return old.some((t) => t.id === created.id) ? old : [...old, created];
+      });
+    },
+    onError: (error: Error, { tempId, title }) => {
+      queryClient.setQueryData<TaskWithRelations[]>(tasksKey, (old = []) =>
+        old.filter((t) => t.id !== tempId)
+      );
+      toast.error(`Couldn't add "${title}": ${error.message || "unknown error"}`);
+    },
+    onSettled: () => {
+      quickAddPending.current -= 1;
+      if (quickAddPending.current === 0) invalidate();
+    },
+  });
+
+  const quickCreateMutate = quickCreate.mutate;
+  const quickAdd = useCallback(
+    (columnId: string, title: string): TaskWithRelations => {
+      // Stop an in-flight refetch from landing on top of the placeholder.
+      void queryClient.cancelQueries({ queryKey: tasksKey });
+      const current = queryClient.getQueryData<TaskWithRelations[]>(tasksKey) ?? [];
+      const now = new Date().toISOString();
+      const placeholder: TaskWithRelations = {
+        id: `${TEMP_TASK_PREFIX}${crypto.randomUUID()}`,
+        project_id: projectId,
+        column_id: columnId,
+        user_id: "",
+        title: title.trim(),
+        description: null,
+        position: nextPosition(current, columnId),
+        priority: "medium",
+        start_date: null,
+        due_date: null,
+        completed_at: null,
+        is_archived: false,
+        recurrence_type: "none",
+        recurrence_cron: null,
+        recurrence_parent_id: null,
+        created_at: now,
+        updated_at: now,
+        subtasks: [],
+        tags: [],
+      };
+      queryClient.setQueryData<TaskWithRelations[]>(tasksKey, (old = []) => [...old, placeholder]);
+      quickAddPending.current += 1;
+      quickCreateMutate({
+        tempId: placeholder.id,
+        projectId,
+        columnId,
+        title: placeholder.title,
+        position: placeholder.position,
+      });
+      return placeholder;
+    },
+    // tasksKey is derived from projectId.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient, projectId, quickCreateMutate]
+  );
+
+  return { create, update, move, reorder, remove, duplicate, setCompleted, quickAdd };
 }

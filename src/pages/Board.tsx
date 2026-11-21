@@ -54,6 +54,7 @@ import {
 import { useTags } from "@/features/board/use-tags";
 import { useFilterStore } from "@/store/filter-store";
 import { buildTaskPredicate } from "@/lib/task-filters";
+import { isTempTask } from "@/features/board/quick-add";
 import { sortTasks } from "@/lib/sort-tasks";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -97,6 +98,9 @@ export default function Board() {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
+  const [defaultTitle, setDefaultTitle] = useState<string | undefined>(undefined);
+  // The column whose inline quick-add composer is open; one at a time.
+  const [composerColumnId, setComposerColumnId] = useState<string | null>(null);
 
   // Filtered view of the board. Column objects keep their identity when
   // their filtered contents haven't changed, so the memoised column/card
@@ -324,7 +328,9 @@ export default function Board() {
           updates.push(...buildPositionUpdates(remaining, sourceFull.id, tasksById));
         }
       }
-      if (updates.length > 0) taskMutations.reorder.mutate(updates);
+      // Quick-add placeholders still being saved have no row to update.
+      const savable = updates.filter((u) => !isTempTask(u));
+      if (savable.length > 0) taskMutations.reorder.mutate(savable);
       else resyncIfStale();
       if (destSorted) {
         columnMutations.update.mutate({ columnId: destColumnId, updates: { sort_by: "custom" } });
@@ -333,20 +339,50 @@ export default function Board() {
     }
   };
 
-  const handleAddTask = useCallback((columnId: string) => {
+  const handleAddTask = useCallback((columnId: string, title?: string) => {
     setEditingTask(null);
     setDefaultColumnId(columnId);
+    setDefaultTitle(title);
     setTaskDialogOpen(true);
   }, []);
 
+  // Read through a ref so a filter change doesn't hand every column a new
+  // callback (and re-render them all).
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const quickAdd = taskMutations.quickAdd;
+  const handleQuickAdd = useCallback(
+    (column: Column, titles: string[]) => {
+      const added = titles.map((title) => quickAdd(column.id, title));
+      const matches = buildTaskPredicate(filtersRef.current);
+      const hidden = added.filter((task) => !matches(task)).length;
+      if (hidden > 0) {
+        toast.info(
+          hidden === 1
+            ? `Added to ${column.name}, but hidden by the current filters`
+            : `Added ${hidden} tasks to ${column.name}, hidden by the current filters`
+        );
+      } else if (added.length > 1) {
+        toast.success(`Added ${added.length} tasks to ${column.name}`);
+      }
+    },
+    [quickAdd]
+  );
+
+  // Placeholder tasks from quick-add have no row yet; ignore clicks on them
+  // for the moment until the save lands.
   const handleOpenTask = useCallback((task: TaskWithRelations) => {
+    if (isTempTask(task)) return;
     setEditingTask(task);
     setTaskDialogOpen(true);
   }, []);
 
   const setCompletedMutate = taskMutations.setCompleted.mutate;
   const handleToggleComplete = useCallback(
-    (task: TaskWithRelations, completed: boolean) => setCompletedMutate({ task, completed }),
+    (task: TaskWithRelations, completed: boolean) => {
+      if (isTempTask(task)) return;
+      setCompletedMutate({ task, completed });
+    },
     [setCompletedMutate]
   );
 
@@ -364,11 +400,14 @@ export default function Board() {
     [updateColumnMutate]
   );
   const handleToggleCollapse = useCallback(
-    (column: Column) =>
+    (column: Column) => {
+      // A collapsed column has no composer; don't reopen it on expand.
+      if (!column.is_collapsed) setComposerColumnId((id) => (id === column.id ? null : id));
       updateColumnMutate({
         columnId: column.id,
         updates: { is_collapsed: !column.is_collapsed },
-      }),
+      });
+    },
     [updateColumnMutate]
   );
 
@@ -457,6 +496,9 @@ export default function Board() {
               <ColumnComponent
                 key={column.id}
                 column={column}
+                composerOpen={composerColumnId === column.id && !column.is_collapsed}
+                onSetComposer={setComposerColumnId}
+                onQuickAdd={handleQuickAdd}
                 onAddTask={handleAddTask}
                 onOpenTask={handleOpenTask}
                 onToggleComplete={handleToggleComplete}
@@ -548,6 +590,7 @@ export default function Board() {
         projectId={projectId}
         columns={columns}
         defaultColumnId={defaultColumnId}
+        defaultTitle={defaultTitle}
       />
     </div>
   );

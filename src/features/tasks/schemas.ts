@@ -1,9 +1,16 @@
 import { z } from "zod";
 import { isValidCronExpression } from "@/lib/cron";
 
+/** Task title rule, shared by the task dialog and the board's quick-add. */
+export const taskTitleSchema = z
+  .string()
+  .trim()
+  .min(1, "Title is required")
+  .max(200, "Keep it under 200 characters");
+
 export const taskFormSchema = z
   .object({
-    title: z.string().trim().min(1, "Title is required").max(200, "Keep it under 200 characters"),
+    title: taskTitleSchema,
     description: z.string().trim().max(5000).optional(),
     columnId: z.string().min(1, "Column is required"),
     priority: z.enum(["low", "medium", "high", "critical"]),
