@@ -17,51 +17,31 @@ interface FilterState {
   togglePriority: (projectId: string, priority: Priority) => void;
   toggleTag: (projectId: string, tagId: string) => void;
   setSearch: (projectId: string, search: string) => void;
-  reset: (projectId: string) => void;
 }
 
-export const useFilterStore = create<FilterState>((set, get) => ({
-  filtersByProject: {},
-  getFilters: (projectId) => get().filtersByProject[projectId] ?? emptyFilters,
-  setDue: (projectId, due) =>
-    set((s) => ({
-      filtersByProject: {
-        ...s.filtersByProject,
-        [projectId]: { ...(s.filtersByProject[projectId] ?? emptyFilters), due },
-      },
-    })),
-  setShowCompleted: (projectId, showCompleted) =>
-    set((s) => ({
-      filtersByProject: {
-        ...s.filtersByProject,
-        [projectId]: { ...(s.filtersByProject[projectId] ?? emptyFilters), showCompleted },
-      },
-    })),
-  togglePriority: (projectId, priority) =>
+/** `list` with `value` added, or removed if it was already there. */
+function toggled<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+export const useFilterStore = create<FilterState>((set, get) => {
+  /** Merges `fn(current)` into one project's filters. */
+  const patch = (projectId: string, fn: (current: TaskFilters) => Partial<TaskFilters>) =>
     set((s) => {
       const current = s.filtersByProject[projectId] ?? emptyFilters;
-      const priorities = current.priorities.includes(priority)
-        ? current.priorities.filter((p) => p !== priority)
-        : [...current.priorities, priority];
       return {
-        filtersByProject: { ...s.filtersByProject, [projectId]: { ...current, priorities } },
+        filtersByProject: { ...s.filtersByProject, [projectId]: { ...current, ...fn(current) } },
       };
-    }),
-  toggleTag: (projectId, tagId) =>
-    set((s) => {
-      const current = s.filtersByProject[projectId] ?? emptyFilters;
-      const tagIds = current.tagIds.includes(tagId)
-        ? current.tagIds.filter((t) => t !== tagId)
-        : [...current.tagIds, tagId];
-      return { filtersByProject: { ...s.filtersByProject, [projectId]: { ...current, tagIds } } };
-    }),
-  setSearch: (projectId, search) =>
-    set((s) => ({
-      filtersByProject: {
-        ...s.filtersByProject,
-        [projectId]: { ...(s.filtersByProject[projectId] ?? emptyFilters), search },
-      },
-    })),
-  reset: (projectId) =>
-    set((s) => ({ filtersByProject: { ...s.filtersByProject, [projectId]: emptyFilters } })),
-}));
+    });
+
+  return {
+    filtersByProject: {},
+    getFilters: (projectId) => get().filtersByProject[projectId] ?? emptyFilters,
+    setDue: (projectId, due) => patch(projectId, () => ({ due })),
+    setShowCompleted: (projectId, showCompleted) => patch(projectId, () => ({ showCompleted })),
+    togglePriority: (projectId, priority) =>
+      patch(projectId, (c) => ({ priorities: toggled(c.priorities, priority) })),
+    toggleTag: (projectId, tagId) => patch(projectId, (c) => ({ tagIds: toggled(c.tagIds, tagId) })),
+    setSearch: (projectId, search) => patch(projectId, () => ({ search })),
+  };
+});

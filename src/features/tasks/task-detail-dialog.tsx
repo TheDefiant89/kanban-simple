@@ -36,7 +36,7 @@ import {
 import { SubtaskList, type SubtaskItem } from "@/features/tasks/subtask-list";
 import { TagSelector } from "@/features/tasks/tag-selector";
 import { taskFormSchema, type TaskFormInput } from "@/features/tasks/schemas";
-import { useTaskCache, useTaskMutations } from "@/features/board/use-board";
+import { useTaskCache, type TaskMutations } from "@/features/board/use-board";
 import { nextPosition } from "@/features/board/quick-add";
 import { useTagMutations, useTags } from "@/features/board/use-tags";
 import { createSubtask, deleteSubtask, updateSubtask } from "@/services/subtasks";
@@ -56,6 +56,11 @@ interface TaskDetailDialogProps {
   task: TaskWithRelations | null;
   projectId: string;
   columns: ColumnWithTasks[];
+  /**
+   * The board's task mutations, shared rather than re-created here so both
+   * use one set of mutation observers (and one quick-add pending counter).
+   */
+  taskMutations: TaskMutations;
   defaultColumnId?: string;
   /** Pre-fills the title when creating (e.g. from the board's quick-add). */
   defaultTitle?: string;
@@ -80,11 +85,11 @@ export function TaskDetailDialog({
   task,
   projectId,
   columns,
+  taskMutations,
   defaultColumnId,
   defaultTitle,
 }: TaskDetailDialogProps) {
   const isEdit = !!task;
-  const taskMutations = useTaskMutations(projectId);
   const taskCache = useTaskCache(projectId);
   const { data: allTags = [] } = useTags();
   const tagMutations = useTagMutations();

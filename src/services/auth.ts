@@ -73,9 +73,3 @@ export async function changePassword(currentPassword: string, newPassword: strin
     throw new Error("Too many incorrect password attempts. Try again in a few minutes.");
   }
 }
-
-export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  return data.session;
-}

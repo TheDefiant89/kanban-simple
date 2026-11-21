@@ -154,6 +154,8 @@ export function useColumnMutations(projectId: string) {
   return { create, update, remove, reorder };
 }
 
+export type TaskMutations = ReturnType<typeof useTaskMutations>;
+
 export function useTaskMutations(projectId: string) {
   const queryClient = useQueryClient();
   const tasksKey = queryKeys.tasks(projectId);
