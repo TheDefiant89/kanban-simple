@@ -214,61 +214,29 @@ export async function deleteTask(taskId: string): Promise<void> {
 }
 
 /**
- * Copies a task (with its subtasks and tags) right after the original. Works
- * from the caller's already-loaded task rather than re-fetching it. The
- * make-room trigger shifts the tasks below, so callers re-fetch the board.
+ * Copies a task with its subtasks and tags in one transaction (the
+ * duplicate_task RPC), right after the original. The make-room trigger
+ * shifts the tasks below, so callers re-fetch the board.
  */
-export async function duplicateTask(original: TaskWithRelations): Promise<void> {
-  const { data: created, error } = await supabase
-    .from("tasks")
-    .insert({
-      project_id: original.project_id,
-      column_id: original.column_id,
-      title: `${original.title} (copy)`,
-      description: original.description,
-      position: original.position + 1,
-      priority: original.priority,
-      start_date: original.start_date,
-      due_date: original.due_date,
-      recurrence_type: original.recurrence_type,
-      recurrence_cron: original.recurrence_cron,
-    })
-    .select("id")
-    .single();
+export async function duplicateTask(taskId: string): Promise<void> {
+  const { error } = await supabase.rpc("duplicate_task", { p_task_id: taskId });
   if (error) throw error;
-
-  await Promise.all([
-    insertSubtasks(
-      created.id,
-      original.subtasks.map((s) => ({
-        title: s.title,
-        is_completed: s.is_completed,
-        position: s.position,
-      }))
-    ),
-    addTaskTags(
-      created.id,
-      original.tags.map((t) => t.id)
-    ),
-  ]);
 }
 
-export interface TaskStat {
+export interface ProjectTaskStats {
   project_id: string;
-  due_date: string | null;
-  completed_at: string | null;
+  task_count: number;
+  completed_count: number;
+  overdue_count: number;
 }
 
-/** Lightweight rows used to compute dashboard tile stats across all of a user's projects. */
-export async function listTaskStatsForUser(): Promise<TaskStat[]> {
-  // Paged for the same reason as listTasks: users can have well over one
-  // response's worth of tasks across their projects.
-  return fetchAllPages((from, to) =>
-    supabase
-      .from("tasks")
-      .select("project_id, due_date, completed_at")
-      .eq("is_archived", false)
-      .order("id", { ascending: true })
-      .range(from, to)
-  );
+/**
+ * Active-task counts per project, aggregated in the database: one row per
+ * project instead of one per task. `today` is the viewer's local calendar
+ * day (YYYY-MM-DD), so "overdue" matches what the board shows.
+ */
+export async function listProjectTaskStats(today: string): Promise<ProjectTaskStats[]> {
+  const { data, error } = await supabase.rpc("project_task_stats", { p_today: today });
+  if (error) throw error;
+  return data ?? [];
 }

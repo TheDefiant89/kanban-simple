@@ -188,6 +188,19 @@ export type Database = {
         Args: { p_source_id: string; p_name: string; p_slug: string };
         Returns: Database["public"]["Tables"]["projects"]["Row"];
       };
+      duplicate_task: {
+        Args: { p_task_id: string };
+        Returns: string;
+      };
+      project_task_stats: {
+        Args: { p_today: string };
+        Returns: {
+          project_id: string;
+          task_count: number;
+          completed_count: number;
+          overdue_count: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

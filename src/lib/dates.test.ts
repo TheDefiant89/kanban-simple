@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDate, formatDate, addDays, isOverdue } from "@/lib/dates";
+import { parseDate, formatDate, addDays, isOverdue, toLocalDateString } from "@/lib/dates";
 
 describe("parseDate", () => {
   it("reads a date-only value as a local calendar day", () => {
@@ -70,5 +70,14 @@ describe("isOverdue", () => {
 
   it("does not flag a task with no due date", () => {
     expect(isOverdue(null, null)).toBe(false);
+  });
+});
+
+describe("toLocalDateString", () => {
+  it("formats the local calendar day, zero-padded", () => {
+    expect(toLocalDateString(new Date(2026, 0, 5))).toBe("2026-01-05");
+    // 23:30 local is still that day locally even where it's already
+    // tomorrow in UTC.
+    expect(toLocalDateString(new Date(2026, 10, 21, 23, 30))).toBe("2026-11-21");
   });
 });

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-client";
-import { isOverdue } from "@/lib/dates";
+import { toLocalDateString } from "@/lib/dates";
 import type { ProjectWithStats } from "@/types";
 import {
   createProject,
@@ -10,7 +10,7 @@ import {
   listProjects,
   updateProject,
 } from "@/services/projects";
-import { listTaskStatsForUser } from "@/services/tasks";
+import { listProjectTaskStats } from "@/services/tasks";
 import { listColumns } from "@/services/columns";
 import { listTasks } from "@/services/tasks";
 import type { Project } from "@/types";
@@ -19,34 +19,20 @@ export function useProjectsWithStats(includeArchived = false) {
   return useQuery({
     queryKey: [...queryKeys.projects, { includeArchived }],
     queryFn: async (): Promise<ProjectWithStats[]> => {
-      const [projects, taskStats] = await Promise.all([
+      const [projects, stats] = await Promise.all([
         listProjects(includeArchived),
-        listTaskStatsForUser(),
+        listProjectTaskStats(toLocalDateString(new Date())),
       ]);
-
-      // Single pass over the task rows instead of three filters per project.
-      const statsByProject = new Map<
-        string,
-        { taskCount: number; completedCount: number; overdueCount: number }
-      >();
-      for (const task of taskStats) {
-        let stats = statsByProject.get(task.project_id);
-        if (!stats) {
-          stats = { taskCount: 0, completedCount: 0, overdueCount: 0 };
-          statsByProject.set(task.project_id, stats);
-        }
-        stats.taskCount += 1;
-        if (task.completed_at) stats.completedCount += 1;
-        else if (isOverdue(task.due_date, task.completed_at)) stats.overdueCount += 1;
-      }
-
-      return projects.map((project) => ({
-        ...project,
-        taskCount: 0,
-        completedCount: 0,
-        overdueCount: 0,
-        ...statsByProject.get(project.id),
-      }));
+      const statsByProject = new Map(stats.map((s) => [s.project_id, s]));
+      return projects.map((project) => {
+        const s = statsByProject.get(project.id);
+        return {
+          ...project,
+          taskCount: s?.task_count ?? 0,
+          completedCount: s?.completed_count ?? 0,
+          overdueCount: s?.overdue_count ?? 0,
+        };
+      });
     },
   });
 }

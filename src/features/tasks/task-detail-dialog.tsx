@@ -439,7 +439,7 @@ export function TaskDetailDialog({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        taskMutations.duplicate.mutate(task!, {
+                        taskMutations.duplicate.mutate(task!.id, {
                           onSuccess: () => onOpenChange(false),
                         })
                       }

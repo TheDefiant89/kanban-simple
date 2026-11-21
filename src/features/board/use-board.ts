@@ -275,8 +275,6 @@ export function useTaskMutations(projectId: string) {
       invalidate();
       toast.success("Task duplicated");
     },
-    // The copy may exist without all its subtasks/tags; show what's there.
-    onError: invalidate,
     meta: { errorMessage: "Failed to duplicate task" },
   });
 
