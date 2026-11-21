@@ -181,6 +181,12 @@ column with `start_date`/`due_date` shifted forward, linked back to the original
 `completed_at` is cleared. The tag/subtask copy was added in
 `supabase/migrations/20260708000000_recurring_task_copy_tags.sql`.
 
+The next occurrence normally follows the original schedule (due date + 1 day / 7 days /
+1 month, or the next cron match). If a task is completed **after** its due date, the
+next due date is counted from the completion day instead, so finishing a long-overdue
+task doesn't create another occurrence that is already overdue
+(`supabase/migrations/20261121120000_recurring_reschedule_from_completion.sql`).
+
 This is intentionally implemented as a lightweight, synchronous SQL trigger rather than
 a scheduled job, so it works with zero infrastructure beyond the database. The `custom`
 recurrence type stores a cron expression on the task but currently falls back to a
