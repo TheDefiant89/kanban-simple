@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Archive, CircleCheck, Filter, Search, Tag as TagIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -58,6 +59,9 @@ export function BoardToolbar({
   onShowCompletedChange,
   onOpenArchived,
 }: BoardToolbarProps) {
+  const filterRowRef = useRef<HTMLDivElement>(null);
+  const overflow = useScrollOverflow(filterRowRef);
+
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background/60 px-3 py-2 sm:px-4 sm:py-2.5 short:min-w-0 short:flex-1 short:flex-nowrap short:border-b-0 short:py-1.5 short:pl-1 sm:short:py-1.5 sm:short:pl-1">
       <div className="relative w-full sm:max-w-xs short:w-36 short:shrink-0">
@@ -74,7 +78,12 @@ export function BoardToolbar({
       {/* Phones: the filters share one horizontally swipeable row instead of
           wrapping onto three. From sm up the wrapper dissolves (`contents`)
           and the controls flow in the parent row as before. */}
-      <div className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:not-short:contents short:mx-0 short:w-auto short:min-w-0 short:flex-1 short:px-0 [&::-webkit-scrollbar]:hidden">
+      <div
+        ref={filterRowRef}
+        data-more-left={overflow.left}
+        data-more-right={overflow.right}
+        className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] data-[more-left=true]:[mask-image:linear-gradient(to_right,transparent,#000_2.5rem)] data-[more-right=true]:[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] data-[more-left=true]:data-[more-right=true]:[mask-image:linear-gradient(to_right,transparent,#000_2.5rem,#000_calc(100%-2.5rem),transparent)] sm:not-short:contents short:mx-0 short:w-auto short:min-w-0 short:flex-1 short:px-0 [&::-webkit-scrollbar]:hidden"
+      >
         <Select value={filters.due} onValueChange={(v) => onDueChange(v as DueDateFilter)}>
           <SelectTrigger className="w-32 shrink-0 sm:w-40 short:w-28">
             <SelectValue />
@@ -177,11 +186,47 @@ export function BoardToolbar({
           >
             Show completed
           </Label>
-          <Button variant="outline" size="sm" className="sm:ml-1" onClick={onOpenArchived}>
-            <Archive className="h-4 w-4" /> Archived
+          {/* Icon-only on phones to keep the swipeable row short. */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="max-sm:w-8 max-sm:px-0 sm:ml-1"
+            onClick={onOpenArchived}
+            title="Archived tasks"
+          >
+            <Archive className="h-4 w-4" />
+            <span className="max-sm:sr-only">Archived</span>
           </Button>
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Whether a horizontally scrollable element has content hidden past its left
+ * and right edges. Drives the edge fades on the phone filter row, so a
+ * clipped control reads as "swipe for more". Both stay false when the element
+ * doesn't scroll (e.g. `display: contents` on wider screens).
+ */
+function useScrollOverflow(ref: React.RefObject<HTMLDivElement | null>) {
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setOverflow((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [ref]);
+  return overflow;
 }
