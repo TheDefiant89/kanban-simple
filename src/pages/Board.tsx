@@ -62,9 +62,19 @@ import { sortTasks } from "@/lib/sort-tasks";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { cn } from "@/lib/utils";
-import type { Column, ColumnSort, ColumnWithTasks, TaskWithRelations } from "@/types";
+import type {
+  Column,
+  ColumnSort,
+  ColumnWithTasks,
+  Priority,
+  Tag,
+  TaskFilters,
+  TaskWithRelations,
+} from "@/types";
 
 const noop = () => {};
+// Shared default so the memoised toolbar sees a stable `tags` while loading.
+const NO_TAGS: Tag[] = [];
 
 export default function Board() {
   const params = useParams<{ slug: string }>();
@@ -80,13 +90,26 @@ export default function Board() {
 
   const columnMutations = useColumnMutations(projectId);
   const taskMutations = useTaskMutations(projectId);
-  const { data: tags = [] } = useTags();
+  const { data: tags = NO_TAGS } = useTags();
   const filters = useFilterStore((s) => s.getFilters(projectId));
   const setDue = useFilterStore((s) => s.setDue);
   const setShowCompleted = useFilterStore((s) => s.setShowCompleted);
   const togglePriority = useFilterStore((s) => s.togglePriority);
   const toggleTag = useFilterStore((s) => s.toggleTag);
   const setSearch = useFilterStore((s) => s.setSearch);
+  // Stable per project (the store's actions never change), so the memoised
+  // toolbar skips the board's frequent re-renders.
+  const toolbarHandlers = useMemo(
+    () => ({
+      onSearchChange: (v: string) => setSearch(projectId, v),
+      onDueChange: (v: TaskFilters["due"]) => setDue(projectId, v),
+      onTogglePriority: (p: Priority) => togglePriority(projectId, p),
+      onToggleTag: (id: string) => toggleTag(projectId, id),
+      onShowCompletedChange: (v: boolean) => setShowCompleted(projectId, v),
+      onOpenArchived: () => setArchivedOpen(true),
+    }),
+    [projectId, setSearch, setDue, togglePriority, toggleTag, setShowCompleted]
+  );
 
   const [items, setItems] = useState<ColumnWithTasks[]>([]);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
@@ -513,12 +536,12 @@ export default function Board() {
         <BoardToolbar
           filters={filters}
           tags={tags}
-          onSearchChange={(v) => setSearch(projectId, v)}
-          onDueChange={(v) => setDue(projectId, v)}
-          onTogglePriority={(p) => togglePriority(projectId, p)}
-          onToggleTag={(id) => toggleTag(projectId, id)}
-          onShowCompletedChange={(v) => setShowCompleted(projectId, v)}
-          onOpenArchived={() => setArchivedOpen(true)}
+          onSearchChange={toolbarHandlers.onSearchChange}
+          onDueChange={toolbarHandlers.onDueChange}
+          onTogglePriority={toolbarHandlers.onTogglePriority}
+          onToggleTag={toolbarHandlers.onToggleTag}
+          onShowCompletedChange={toolbarHandlers.onShowCompletedChange}
+          onOpenArchived={toolbarHandlers.onOpenArchived}
           searchInputRef={searchInputRef}
         />
       </div>
