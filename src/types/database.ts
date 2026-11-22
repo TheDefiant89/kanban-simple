@@ -59,6 +59,8 @@ export type Task = {
   recurrence_type: RecurrenceType;
   recurrence_cron: string | null;
   recurrence_parent_id: string | null;
+  /** The note this task was created from, if any. */
+  note_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -70,6 +72,8 @@ export type Subtask = {
   title: string;
   is_completed: boolean;
   position: number;
+  /** The sub-note this subtask was created from, if any. */
+  note_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -79,6 +83,17 @@ export type Tag = {
   user_id: string;
   name: string;
   color: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Note = {
+  id: string;
+  user_id: string;
+  /** Unique per user (case-insensitive); may not contain [ ] | # */
+  title: string;
+  /** Markdown. The first [[Title]] link names the note's parent. */
+  content: string;
   created_at: string;
   updated_at: string;
 };
@@ -143,6 +158,12 @@ export type Database = {
         Update: Partial<Tag>;
         Relationships: [];
       };
+      notes: {
+        Row: Note;
+        Insert: Partial<Note> & { title: string };
+        Update: Partial<Note>;
+        Relationships: [];
+      };
       task_tags: {
         Row: TaskTag;
         Insert: Partial<TaskTag> & { task_id: string; tag_id: string };
@@ -191,6 +212,14 @@ export type Database = {
       duplicate_task: {
         Args: { p_task_id: string };
         Returns: string;
+      };
+      convert_note_to_task: {
+        Args: { p_note_id: string; p_column_id: string; p_child_note_ids: string[] };
+        Returns: string;
+      };
+      sync_note_task_subtasks: {
+        Args: { p_task_id: string; p_child_note_ids: string[] };
+        Returns: number;
       };
       project_task_stats: {
         Args: { p_today: string };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { NotebookPen, Plus, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ export interface SubtaskItem {
   id: string;
   title: string;
   is_completed: boolean;
+  /** The sub-note this subtask was made from, if any. */
+  note_id?: string | null;
 }
 
 const SUBTASK_TITLE_MAX_LENGTH = 200;
@@ -18,9 +20,11 @@ interface SubtaskListProps {
   onAdd: (title: string) => void;
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
+  /** Opens a subtask's sub-note; the link is hidden without it. */
+  onOpenNote?: (noteId: string) => void;
 }
 
-export function SubtaskList({ subtasks, onAdd, onToggle, onDelete }: SubtaskListProps) {
+export function SubtaskList({ subtasks, onAdd, onToggle, onDelete, onOpenNote }: SubtaskListProps) {
   const [newTitle, setNewTitle] = useState("");
   const completed = subtasks.filter((s) => s.is_completed).length;
 
@@ -70,6 +74,19 @@ export function SubtaskList({ subtasks, onAdd, onToggle, onDelete }: SubtaskList
             >
               {subtask.title}
             </span>
+            {subtask.note_id && onOpenNote && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[var(--accent-solid)] pointer-fine:h-6 pointer-fine:w-6"
+                onClick={() => onOpenNote(subtask.note_id!)}
+                aria-label={`Open the note for "${subtask.title}"`}
+                title="Open linked note"
+              >
+                <NotebookPen className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"

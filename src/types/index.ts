@@ -10,6 +10,7 @@ export type {
   Subtask,
   Tag,
   TaskTag,
+  Note,
   ActivityLogEntry,
   ColumnSort,
 } from "./database";

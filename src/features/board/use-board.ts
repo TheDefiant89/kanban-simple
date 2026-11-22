@@ -74,6 +74,7 @@ export function useBoardData(projectId: string) {
     project: projectQuery.data,
     columns,
     isLoading: projectQuery.isLoading || columnsQuery.isLoading || tasksQuery.isLoading,
+    tasksFetching: tasksQuery.isFetching,
     error: projectQuery.error || columnsQuery.error || tasksQuery.error,
   };
 }
@@ -357,6 +358,7 @@ export function useTaskMutations(projectId: string) {
         recurrence_type: "none",
         recurrence_cron: null,
         recurrence_parent_id: null,
+        note_id: null,
         created_at: now,
         updated_at: now,
         subtasks: [],

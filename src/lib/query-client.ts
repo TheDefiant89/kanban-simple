@@ -41,6 +41,8 @@ export const queryKeys = {
   archivedTasks: (projectId: string) => ["archived-tasks", projectId] as const,
   autoArchiveDays: ["profile", "auto-archive-days"] as const,
   tags: ["tags"] as const,
+  notes: ["notes"] as const,
+  noteTasks: ["note-tasks"] as const,
 };
 
 /** What an optimistic onMutate hands to onError so the patch can be undone. */

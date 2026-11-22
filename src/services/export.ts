@@ -3,6 +3,7 @@ import { listProjects } from "./projects";
 import { listColumns } from "./columns";
 import { listTasks } from "./tasks";
 import { listTags } from "./tags";
+import { listNotes } from "./notes";
 
 function toCsv(rows: object[], columns: string[]): string {
   const escape = (value: unknown): string => {
@@ -45,23 +46,24 @@ const COLUMN_COLUMNS = [
 const TASK_COLUMNS = [
   "id", "project_id", "column_id", "title", "description", "position", "priority",
   "start_date", "due_date", "completed_at", "is_archived", "recurrence_type",
-  "recurrence_cron", "recurrence_parent_id", "created_at", "updated_at",
+  "recurrence_cron", "recurrence_parent_id", "note_id", "created_at", "updated_at",
 ];
 const SUBTASK_COLUMNS = [
-  "id", "task_id", "title", "is_completed", "position", "created_at", "updated_at",
+  "id", "task_id", "title", "is_completed", "position", "note_id", "created_at", "updated_at",
 ];
 const TAG_COLUMNS = ["id", "name", "color", "created_at", "updated_at"];
+const NOTE_COLUMNS = ["id", "title", "content", "created_at", "updated_at"];
 
 /**
  * Fetches every row the current user owns across all entity tables and
  * triggers one CSV download per table (projects, columns, tasks, subtasks,
- * tags), matching the schema in supabase/migrations exactly.
+ * tags, notes), matching the schema in supabase/migrations exactly.
  */
 export async function exportUserDataAsCsv(): Promise<void> {
   await currentUserId(); // fail fast when signed out
 
   const projects = await listProjects(true);
-  const tags = await listTags();
+  const [tags, notes] = await Promise.all([listTags(), listNotes()]);
 
   const columnsByProject = await Promise.all(projects.map((p) => listColumns(p.id)));
   const tasksByProject = await Promise.all(projects.map((p) => listTasks(p.id, true)));
@@ -76,4 +78,5 @@ export async function exportUserDataAsCsv(): Promise<void> {
   downloadFile(`kanban-tasks-${date}.csv`, toCsv(tasks, TASK_COLUMNS), "text/csv");
   downloadFile(`kanban-subtasks-${date}.csv`, toCsv(subtasks, SUBTASK_COLUMNS), "text/csv");
   downloadFile(`kanban-tags-${date}.csv`, toCsv(tags, TAG_COLUMNS), "text/csv");
+  downloadFile(`kanban-notes-${date}.csv`, toCsv(notes, NOTE_COLUMNS), "text/csv");
 }

@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SubtaskList, type SubtaskItem } from "@/features/tasks/subtask-list";
+import { LinkedNote } from "@/features/notes/linked-note";
+import { useNotesStore } from "@/store/notes-store";
 import { TagSelector } from "@/features/tasks/tag-selector";
 import { taskFormSchema, type TaskFormInput } from "@/features/tasks/schemas";
 import { useTaskCache, type TaskMutations } from "@/features/board/use-board";
@@ -93,6 +95,12 @@ export function TaskDetailDialog({
   const taskCache = useTaskCache(projectId);
   const { data: allTags = [] } = useTags();
   const tagMutations = useTagMutations();
+  const openNoteInPanel = useNotesStore((s) => s.openNote);
+  // The dialog is modal, so it gets out of the way of the notes panel.
+  const handleOpenNote = (noteId: string) => {
+    onOpenChange(false);
+    openNoteInPanel(noteId);
+  };
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<SubtaskItem[]>([]);
@@ -179,7 +187,12 @@ export function TaskDetailDialog({
         const created = await createSubtask({ taskId: task.id, title, position: subtasks.length });
         setSubtasks((prev) => [
           ...prev,
-          { id: created.id, title: created.title, is_completed: created.is_completed },
+          {
+            id: created.id,
+            title: created.title,
+            is_completed: created.is_completed,
+            note_id: created.note_id,
+          },
         ]);
         taskCache.patchTask(task.id, (t) => ({ ...t, subtasks: [...t.subtasks, created] }));
       } catch (error) {
@@ -307,6 +320,8 @@ export function TaskDetailDialog({
               />
             </div>
 
+            {task?.note_id && <LinkedNote noteId={task.note_id} onOpenNote={handleOpenNote} />}
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label>Column</Label>
@@ -433,6 +448,7 @@ export function TaskDetailDialog({
               onAdd={handleAddSubtask}
               onToggle={handleToggleSubtask}
               onDelete={handleDeleteSubtask}
+              onOpenNote={handleOpenNote}
             />
 
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -43,6 +43,10 @@ all included. See [Features](#features) below for the full list.
   a future scheduler). Completing a recurring task keeps its own completion record and
   spawns the next occurrence automatically via a Postgres trigger — see
   [Recurring tasks](#recurring-tasks) below.
+- **Notes:** a markdown notebook in a side panel (the notebook icon in the header),
+  grouped into a folder tree with `[[wikilinks]]`. Convert a note into a task and its
+  sub-notes become subtasks; the task and note stay linked both ways — see
+  [Notes](#notes) below.
 - **Filtering & search:** All / Overdue / Today / Tomorrow / This Week / This Month /
   No Due Date / Completed, multi-select priority filter, multi-select tag filter, and
   live search across title, description and tags. Completed tasks are hidden by default.
@@ -193,6 +197,37 @@ recurrence type stores a cron expression on the task but currently falls back to
 daily shift — the schema and trigger are structured so this logic can be lifted into a
 Supabase Edge Function or `pg_cron` job later (for real cron parsing, look-ahead
 generation, etc.) without changing the table structure.
+
+## Notes
+
+Notes are personal (not tied to a project) and written in GitHub-flavoured markdown:
+headings, lists, task lists, tables, code, quotes and links. Raw HTML is shown as text,
+never rendered.
+
+- **Grouping.** A `[[Title]]` link on a note's **first line** files it under that note,
+  so the panel shows a folder tree. Links further down (`[[Title]]`, `[[Title|shown
+  text]]`, `[[Title#Heading]]`) are plain cross-references, so a parent can mention its
+  sub-notes without being filed under them. Clicking a link opens the note, or creates
+  it if it doesn't exist yet; notes that link to a missing parent are grouped under a
+  dashed "ghost" folder you can click to create. "New sub-note" pre-fills the parent
+  link, and typing `[[` in the editor suggests titles.
+- **Editing.** Opening a note shows an editor pane beside the tree (desktop), in place
+  of it with a back button (tablet), or full-screen (phone). Edit / Preview toggle, save
+  with the button or Ctrl/⌘+S. Unsaved edits are kept as drafts (marked with a dot in
+  the tree) when switching notes or reloading, until saved or discarded.
+- **Renaming** a note rewrites every `[[link]]` to it in your other notes, so the tree
+  stays intact, and renames the task/subtasks made from it unless their titles were
+  edited by hand.
+- **Convert to task.** From a note's menu, pick a project and column: the note becomes
+  a task and each sub-note a subtask (optionally including nested sub-notes). The task
+  card shows a notebook icon that opens the note; the task dialog shows the note inline
+  and each linked subtask links to its sub-note. The note shows its linked task (click to
+  open it on its board), and "Update task" adds subtasks for sub-notes created since.
+  Deleting a note keeps its tasks, just unlinked.
+
+Schema, rename propagation and the conversion RPCs are in
+`supabase/migrations/20261122120000_notes.sql`; link parsing and the tree are in
+`src/features/notes/wikilinks.ts`.
 
 ## Account deletion
 
