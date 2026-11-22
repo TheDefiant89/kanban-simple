@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { joinLines, parseQuickAddInput, QUICK_ADD_MAX_LINES } from "@/features/board/quick-add";
@@ -20,8 +20,11 @@ const MAX_HEIGHT = 160;
 /**
  * Trello-style inline "add a card" box at the bottom of a column. Enter
  * adds the task and keeps the box open for the next one.
+ *
+ * Memoised with stable callbacks from Column, so typing here doesn't
+ * re-render with every change to the column's tasks (e.g. each quick-add).
  */
-export function QuickAddComposer({
+export const QuickAddComposer = memo(function QuickAddComposer({
   columnId,
   columnName,
   onAdd,
@@ -226,4 +229,4 @@ export function QuickAddComposer({
       </div>
     </div>
   );
-}
+});

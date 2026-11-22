@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -83,6 +83,26 @@ export const ColumnComponent = memo(function ColumnComponent({
     const list = listRef.current;
     list?.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   }, [taskCount]);
+  // Composer callbacks read the column through a ref so they stay stable
+  // while its tasks change, letting the memoised composer skip re-renders.
+  const columnRef = useRef(column);
+  columnRef.current = column;
+  const handleComposerAdd = useCallback(
+    (titles: string[]) => {
+      scrollToEnd.current = columnRef.current.sort_by === "custom";
+      onQuickAdd(columnRef.current, titles);
+    },
+    [onQuickAdd]
+  );
+  const handleComposerClose = useCallback(() => onSetComposer(null), [onSetComposer]);
+  const handleComposerDetails = useCallback(
+    (title: string) => {
+      onSetComposer(null);
+      onAddTask(columnRef.current.id, title);
+    },
+    [onSetComposer, onAddTask]
+  );
+
   const wasComposerOpen = useRef(composerOpen);
   useEffect(() => {
     if (wasComposerOpen.current && !composerOpen) {
@@ -251,15 +271,9 @@ export const ColumnComponent = memo(function ColumnComponent({
           <QuickAddComposer
             columnId={column.id}
             columnName={column.name}
-            onAdd={(titles) => {
-              scrollToEnd.current = column.sort_by === "custom";
-              onQuickAdd(column, titles);
-            }}
-            onClose={() => onSetComposer(null)}
-            onAddWithDetails={(title) => {
-              onSetComposer(null);
-              onAddTask(column.id, title);
-            }}
+            onAdd={handleComposerAdd}
+            onClose={handleComposerClose}
+            onAddWithDetails={handleComposerDetails}
           />
         ) : (
           <Button

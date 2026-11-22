@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Archive, CircleCheck, Filter, Search, Tag as TagIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -51,7 +51,9 @@ interface BoardToolbarProps {
   searchInputRef?: React.Ref<HTMLInputElement>;
 }
 
-export function BoardToolbar({
+// Memoised: Board hands it stable callbacks, so it only re-renders when the
+// filters or tags change -- not on every drag-over event or task update.
+export const BoardToolbar = memo(function BoardToolbar({
   filters,
   tags,
   onSearchChange,
@@ -220,7 +222,7 @@ export function BoardToolbar({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Whether a horizontally scrollable element has content hidden past its left
