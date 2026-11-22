@@ -1,8 +1,10 @@
+import { lazy, Suspense } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import { LayoutGrid, LogOut, Moon, Settings, Sun, SunMoon } from "lucide-react";
+import { LayoutGrid, LogOut, Moon, NotebookPen, Settings, Sun, SunMoon } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-context";
 import { signOut } from "@/services/auth";
 import { useThemeStore } from "@/store/theme-store";
+import { useNotesStore } from "@/store/notes-store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -14,16 +16,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NeonBackdrop } from "@/components/shared/neon-backdrop";
 import { toast } from "sonner";
-import { errorMessage } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
+
+// Loaded on first open: it brings the markdown renderer with it.
+const NotesPanel = lazy(() => import("@/features/notes/notes-panel"));
 
 export function AppLayout() {
   const { user } = useAuth();
   const { theme, setTheme } = useThemeStore();
   const navigate = useNavigate();
+  const notesOpen = useNotesStore((s) => s.open);
+  const toggleNotes = useNotesStore((s) => s.toggleOpen);
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Unsaved note drafts live in localStorage; don't leave them behind.
+      useNotesStore.getState().reset();
       toast.success("Signed out");
       navigate("/login");
     } catch (error) {
@@ -57,6 +66,20 @@ export function AppLayout() {
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
+          <button
+            className={cn(
+              iconBtn,
+              notesOpen &&
+                "border-[color-mix(in_oklch,var(--accent-solid)_45%,transparent)] bg-[color-mix(in_oklch,var(--accent-solid)_14%,transparent)] text-foreground"
+            )}
+            onClick={toggleNotes}
+            aria-label={notesOpen ? "Close notes" : "Open notes"}
+            aria-pressed={notesOpen}
+            title="Notes"
+          >
+            <NotebookPen className="h-4 w-4" />
+          </button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={iconBtn} aria-label="Toggle theme">
@@ -88,7 +111,10 @@ export function AppLayout() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="ml-0.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Account menu">
+              <button
+                className="ml-0.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Account menu"
+              >
                 <Avatar className="h-[34px] w-[34px]">
                   <AvatarFallback className="bg-accent-grad text-[13px] font-semibold text-white">
                     {initials}
@@ -110,9 +136,16 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]">
-        <Outlet />
-      </main>
+      <div className="relative z-10 flex min-h-0 flex-1">
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]">
+          <Outlet />
+        </main>
+        {notesOpen && (
+          <Suspense fallback={null}>
+            <NotesPanel />
+          </Suspense>
+        )}
+      </div>
     </div>
   );
 }

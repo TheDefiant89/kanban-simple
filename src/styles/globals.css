@@ -302,3 +302,138 @@
     }
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Rendered note markdown (features/notes/markdown.tsx). Hand-rolled rather
+   than a typography plugin so it follows the theme tokens.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .note-prose {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+  .note-prose > :first-child {
+    margin-top: 0;
+  }
+  .note-prose > :last-child {
+    margin-bottom: 0;
+  }
+  .note-prose :where(p, ul, ol, blockquote, pre, table, hr) {
+    margin: 0.7em 0;
+  }
+  .note-prose :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin: 1.2em 0 0.5em;
+  }
+  .note-prose h1 {
+    font-size: 1.45em;
+  }
+  .note-prose h2 {
+    font-size: 1.25em;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-prose h3 {
+    font-size: 1.1em;
+  }
+  .note-prose :where(h4, h5, h6) {
+    font-size: 1em;
+    color: var(--muted-foreground);
+  }
+  .note-prose :where(ul, ol) {
+    padding-left: 1.4em;
+  }
+  .note-prose ul {
+    list-style: disc;
+  }
+  .note-prose ol {
+    list-style: decimal;
+  }
+  .note-prose li + li {
+    margin-top: 0.2em;
+  }
+  .note-prose li::marker {
+    color: var(--muted-foreground);
+  }
+  .note-prose :where(ul.contains-task-list) {
+    list-style: none;
+    padding-left: 0.2em;
+  }
+  .note-prose input[type="checkbox"] {
+    margin-right: 0.45em;
+    vertical-align: -0.1em;
+    accent-color: var(--accent-solid);
+  }
+  .note-prose a {
+    color: var(--accent-solid);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .note-prose .wikilink {
+    color: var(--accent-solid);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 2px;
+    background: color-mix(in srgb, var(--accent-glow) 12%, transparent);
+  }
+  .note-prose .wikilink:hover {
+    background: color-mix(in srgb, var(--accent-glow) 22%, transparent);
+  }
+  .note-prose .wikilink-missing {
+    color: var(--muted-foreground);
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+  }
+  .note-prose blockquote {
+    border-left: 3px solid var(--accent-solid);
+    padding-left: 0.9em;
+    color: var(--muted-foreground);
+  }
+  .note-prose code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .note-prose pre {
+    padding: 0.75em 0.9em;
+    border-radius: 9px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .note-prose pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .note-prose hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+  .note-prose table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+  .note-prose :where(th, td) {
+    border: 1px solid var(--border);
+    padding: 0.35em 0.65em;
+    text-align: left;
+  }
+  .note-prose th {
+    background: var(--muted);
+    font-weight: 600;
+  }
+  .note-prose img {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+}

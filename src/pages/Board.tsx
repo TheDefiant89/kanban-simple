@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
@@ -83,7 +83,7 @@ export default function Board() {
   const slugLookup = useProjectBySlug(slug);
   const projectId = slugLookup.data?.id ?? "";
 
-  const { project, columns, isLoading: boardDataLoading } = useBoardData(projectId);
+  const { project, columns, isLoading: boardDataLoading, tasksFetching } = useBoardData(projectId);
   const columnNames = useMemo(() => new Map(columns.map((c) => [c.id, c.name])), [columns]);
   const isLoading = slugLookup.isLoading || (!!projectId && boardDataLoading);
   useDocumentTitle(project?.name);
@@ -129,6 +129,29 @@ export default function Board() {
   const [composerColumnId, setComposerColumnId] = useState<string | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ?task=<id> opens that task (links from the notes panel). Waits for an
+  // in-flight refetch so a task created moments ago is found.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedTaskId = searchParams.get("task");
+  useEffect(() => {
+    if (!linkedTaskId || !project) return;
+    const task = columns.flatMap((c) => c.tasks).find((t) => t.id === linkedTaskId);
+    if (!task && tasksFetching) return;
+    if (task) {
+      setEditingTask(task);
+      setTaskDialogOpen(true);
+    } else {
+      toast.info("That task is archived or no longer exists");
+    }
+    setSearchParams(
+      (params) => {
+        params.delete("task");
+        return params;
+      },
+      { replace: true }
+    );
+  }, [linkedTaskId, project, columns, tasksFetching, setSearchParams]);
 
   // Filtered view of the board. Column objects keep their identity when
   // their filtered contents haven't changed, so the memoised column/card

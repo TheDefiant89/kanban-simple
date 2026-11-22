@@ -1,13 +1,14 @@
 import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarClock, CheckSquare, Repeat } from "lucide-react";
+import { CalendarClock, CheckSquare, NotebookPen, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PriorityBadge } from "@/components/shared/priority-badge";
 import { formatDate, isOverdue } from "@/lib/dates";
 import { isTempTask } from "@/features/board/quick-add";
 import { cn } from "@/lib/utils";
+import { useNotesStore } from "@/store/notes-store";
 import { PRIORITY_COLORS, type TaskWithRelations } from "@/types";
 
 interface TaskCardProps {
@@ -83,6 +84,7 @@ export const TaskCard = memo(function TaskCard({
         {task.recurrence_type !== "none" && (
           <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}
+        {task.note_id && <OpenNoteButton noteId={task.note_id} />}
       </div>
 
       {task.tags.length > 0 && (
@@ -120,3 +122,23 @@ export const TaskCard = memo(function TaskCard({
     </Card>
   );
 });
+
+/** Opens the note a task was made from in the notes panel. */
+function OpenNoteButton({ noteId }: { noteId: string }) {
+  const openNote = useNotesStore((s) => s.openNote);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        openNote(noteId);
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="-m-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--accent-solid)] hover:bg-[color-mix(in_oklch,var(--accent-solid)_14%,transparent)]"
+      aria-label="Open linked note"
+      title="Open linked note"
+    >
+      <NotebookPen className="h-3.5 w-3.5" />
+    </button>
+  );
+}
