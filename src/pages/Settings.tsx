@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Archive, Download, KeyRound, Loader2, LogOut, ShieldAlert, Tag as TagIcon } from "lucide-react";
+import {
+  Archive,
+  BookOpen,
+  Download,
+  KeyRound,
+  Loader2,
+  LogOut,
+  ShieldAlert,
+  Tag as TagIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +112,22 @@ export default function Settings() {
         <h1 className="font-display text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">Manage your account and data</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" /> Help
+          </CardTitle>
+          <CardDescription>A step-by-step guide to every feature, with screenshots</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link to="/help">
+              <BookOpen className="h-4 w-4" /> Open the how-to guide
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -256,8 +281,8 @@ export default function Settings() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete your account and all of your data. Type{" "}
-              <span className="font-semibold text-foreground">DELETE</span> and enter your
-              password to confirm.
+              <span className="font-semibold text-foreground">DELETE</span> and enter your password
+              to confirm.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-3">

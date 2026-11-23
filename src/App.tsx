@@ -18,6 +18,7 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Board = lazy(() => import("@/pages/Board"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const Help = lazy(() => import("@/pages/Help"));
 
 function PageFallback() {
   return (
@@ -75,6 +76,8 @@ export default function App() {
                     <Route path="/settings" element={<Settings />} />
                   </Route>
                 </Route>
+
+                <Route path="/help" element={<Help />} />
 
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="*" element={<NotFound />} />
