@@ -1,0 +1,114 @@
+{
+  "archived": [
+    576,
+    296
+  ],
+  "board": [
+    1440,
+    900
+  ],
+  "board-light": [
+    1440,
+    900
+  ],
+  "column-actions": [
+    560,
+    300
+  ],
+  "column-collapsed": [
+    760,
+    420
+  ],
+  "column-sort": [
+    560,
+    360
+  ],
+  "dashboard": [
+    1440,
+    640
+  ],
+  "due-filter": [
+    760,
+    420
+  ],
+  "filters": [
+    960,
+    400
+  ],
+  "mobile-board": [
+    390,
+    844
+  ],
+  "mobile-dashboard": [
+    390,
+    844
+  ],
+  "notes-convert": [
+    448,
+    330
+  ],
+  "notes-editor": [
+    924,
+    560
+  ],
+  "notes-menu": [
+    900,
+    380
+  ],
+  "notes-preview": [
+    1440,
+    900
+  ],
+  "notes-tree": [
+    640,
+    440
+  ],
+  "project-menu": [
+    720,
+    360
+  ],
+  "project-new": [
+    512,
+    398
+  ],
+  "quick-add": [
+    304,
+    416
+  ],
+  "settings": [
+    760,
+    942
+  ],
+  "settings-tags": [
+    624,
+    541
+  ],
+  "shortcuts": [
+    384,
+    304
+  ],
+  "show-completed": [
+    1440,
+    900
+  ],
+  "sign-in": [
+    960,
+    640
+  ],
+  "task-dialog": [
+    672,
+    756
+  ],
+  "task-linked-note": [
+    672,
+    810
+  ],
+  "task-recurring": [
+    672,
+    594
+  ],
+  "theme-menu": [
+    440,
+    200
+  ]
+}

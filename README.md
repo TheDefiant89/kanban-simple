@@ -50,6 +50,8 @@ all included. See [Features](#features) below for the full list.
 - **Filtering & search:** All / Overdue / Today / Tomorrow / This Week / This Month /
   No Due Date / Completed, multi-select priority filter, multi-select tag filter, and
   live search across title, description and tags. Completed tasks are hidden by default.
+- **How-to guide:** an illustrated guide to every feature at `/help`, linked from
+  Settings — see [Help page screenshots](#help-page-screenshots) below.
 - **Settings:** view email, change password, sign out, export all data as CSV, delete
   account (with confirmation).
 - **UI:** responsive (mobile/tablet/desktop), light/dark/system theme, loading
@@ -228,6 +230,19 @@ never rendered.
 Schema, rename propagation and the conversion RPCs are in
 `supabase/migrations/20261122120000_notes.sql`; link parsing and the tree are in
 `src/features/notes/wikilinks.ts`.
+
+## Help page screenshots
+
+The how-to guide (`src/pages/Help.tsx`) uses screenshots in `public/help/`. They are taken
+from the real app running against in-memory demo data, so no Supabase project is needed:
+
+```bash
+npx vite --config scripts/help/vite.config.ts   # app + mock data on port 5199
+node scripts/help/capture.cjs                   # in another terminal; or pass names to redo some
+```
+
+The mock client and demo data are in `scripts/help/`; they are never part of the real build.
+Capturing needs Playwright with Chromium installed.
 
 ## Account deletion
 
