@@ -54,7 +54,9 @@ export function TagSelector({ tags, selectedIds, onToggle, onCreate }: TagSelect
           </span>
         ))}
 
-        <Popover open={open} onOpenChange={setOpen}>
+        {/* modal: the popover is portalled outside the task dialog, whose
+            scroll lock otherwise swallows wheel/touch scrolling in the list. */}
+        <Popover modal open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button type="button" variant="outline" size="sm" className="h-6 gap-1 px-2 text-xs">
               <TagIcon className="h-3 w-3" /> Add tag
